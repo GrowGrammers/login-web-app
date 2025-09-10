@@ -142,46 +142,64 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
 
   if (isLoading) {
     return (
-      <div className="dashboard">
-        <div className="loading">
-          <h3>👤 사용자 정보 로드 중...</h3>
-          <div className="spinner"></div>
+      <div className="flex-1 flex flex-col">
+        <div className="flex flex-col items-center justify-center p-12 text-center">
+          <h3 className="text-gray-900 mb-4 text-xl font-semibold">👤 사용자 정보 로드 중...</h3>
+          <div className="w-8 h-8 border-4 border-gray-100 border-t-gray-900 rounded-full animate-spin"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="dashboard">
-      <div className="dashboard-header">
-        <h2 className="dashboard-title">👋 환영합니다!</h2>
-        <div className="logout-buttons">
-          <button onClick={onLogout} className="logout-btn primary">
+    <div className="flex-1 flex flex-col">
+      <div className="p-6 bg-gray-50 border-b border-gray-200 text-center">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">👋 환영합니다!</h2>
+        <div className="flex gap-3 flex-wrap justify-center">
+          <button 
+            onClick={onLogout} 
+            className="px-4 py-2 bg-gray-900 text-white border border-gray-900 rounded-lg font-medium text-sm hover:-translate-y-0.5 transition-all duration-200 hover:bg-gray-700"
+          >
             로그아웃 ({getCurrentProviderType()})
           </button>
         </div>
       </div>
 
-      <div className="dashboard-content">
+      <div className="flex-1 p-6 max-w-3xl mx-auto w-full">
         {/* 사용자 정보 */}
-        <div className="info-section">
-          <h3>👤 사용자 정보</h3>
+        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">👤 사용자 정보</h3>
           {userInfo ? (
-            <div className="user-info">
+            <div>
               {userInfo.id === 'demo-user' && (
-                <div className="demo-notice">
+                <div className="bg-yellow-50 text-yellow-800 p-2 rounded-md mb-4 text-xs text-center">
                   <small>🔧 백엔드 미완성으로 더미 데이터를 표시합니다</small>
                 </div>
               )}
-              <p><strong>ID:</strong> {userInfo.id}</p>
-              <p><strong>이메일:</strong> {userInfo.email}</p>
-              <p><strong>닉네임:</strong> {userInfo.nickname || '설정되지 않음'}</p>
-              <p><strong>Provider:</strong> {userInfo.provider}</p>
+              <p className="my-3 text-sm flex justify-between items-center">
+                <strong className="text-gray-900 font-semibold min-w-[80px]">ID:</strong> 
+                {userInfo.id}
+              </p>
+              <p className="my-3 text-sm flex justify-between items-center">
+                <strong className="text-gray-900 font-semibold min-w-[80px]">이메일:</strong> 
+                {userInfo.email}
+              </p>
+              <p className="my-3 text-sm flex justify-between items-center">
+                <strong className="text-gray-900 font-semibold min-w-[80px]">닉네임:</strong> 
+                {userInfo.nickname || '설정되지 않음'}
+              </p>
+              <p className="my-3 text-sm flex justify-between items-center">
+                <strong className="text-gray-900 font-semibold min-w-[80px]">Provider:</strong> 
+                {userInfo.provider}
+              </p>
             </div>
           ) : (
-            <div className="no-data">
+            <div className="text-center text-gray-600 p-8">
               <p>⚠️ 사용자 정보를 불러올 수 없습니다.</p>
-              <button onClick={loadUserData} className="retry-btn">
+              <button 
+                onClick={loadUserData} 
+                className="p-3 px-4 bg-gray-900 text-white rounded-lg cursor-pointer text-sm font-medium mt-4 hover:bg-gray-700 hover:-translate-y-0.5 transition-all duration-200"
+              >
                 🔄 다시 시도
               </button>
             </div>
@@ -189,22 +207,29 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         </div>
 
         {/* 토큰 정보 */}
-        <div className="info-section">
-          <h3>🔑 토큰 정보</h3>
+        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">🔑 토큰 정보</h3>
           {tokenInfo ? (
-            <div className="token-info">
-              <p><strong>Access Token:</strong> 
-                <code>{tokenInfo.accessToken !== '토큰 없음' ? tokenInfo.accessToken.substring(0, 20) + '...' : '토큰 없음'}</code>
+            <div>
+              <p className="my-3 text-sm flex justify-between items-center">
+                <strong className="text-gray-900 font-semibold min-w-[80px]">Access Token:</strong> 
+                <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono max-w-[200px] overflow-hidden text-ellipsis">
+                  {tokenInfo.accessToken !== '토큰 없음' ? tokenInfo.accessToken.substring(0, 20) + '...' : '토큰 없음'}
+                </code>
               </p>
-              <p><strong>Refresh Token (쿠키):</strong> 
-                <span className="cookie-info">🍪 HttpOnly 쿠키 (JS 접근 불가, 네트워크 탭에서 확인됨)</span>
+              <p className="my-3 text-sm flex justify-between items-center">
+                <strong className="text-gray-900 font-semibold min-w-[80px]">Refresh Token (쿠키):</strong> 
+                <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">
+                  🍪 HttpOnly 쿠키 (JS 접근 불가, 네트워크 탭에서 확인됨)
+                </span>
               </p>
               {tokenInfo.expiredAt && (
-                <p><strong>만료 시간:</strong> 
+                <p className="my-3 text-sm flex justify-between items-center">
+                  <strong className="text-gray-900 font-semibold min-w-[80px]">만료 시간:</strong> 
                   {new Date(tokenInfo.expiredAt).toLocaleString()}
                 </p>
               )}
-              <div className="token-notice">
+              <div className="text-xs text-gray-600 mt-4 p-3 bg-blue-50 rounded-lg">
                 <small>💡 refreshToken은 보안상 HttpOnly 쿠키로 설정되어 JavaScript에서 접근할 수 없습니다. 이는 정상적인 보안 정책입니다.</small>
               </div>
             </div>
@@ -214,57 +239,22 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         </div>
 
         {/* 토큰 관리 */}
-        <div className="token-actions">
-          <h3>🔧 토큰 관리</h3>
-          <div className="action-buttons">
+        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">🔧 토큰 관리</h3>
+          <div className="flex flex-col gap-3">
             <button 
               onClick={handleRefreshToken} 
               disabled={isRefreshing}
-              className="action-btn"
+              className="w-full p-3 bg-gray-900 text-white rounded-lg cursor-pointer font-medium hover:bg-gray-700 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {isRefreshing ? '⏳ 갱신 중...' : '🔄 토큰 갱신'}
             </button>
             <button 
               onClick={handleTokenValidation}
-              className="action-btn"
+              className="w-full p-3 bg-gray-900 text-white rounded-lg cursor-pointer font-medium hover:bg-gray-700 hover:-translate-y-0.5 transition-all duration-200"
             >
               ✅ 토큰 검증
             </button>
-            <button 
-              onClick={loadUserData}
-              className="action-btn"
-            >
-              🔄 데이터 새로고침
-            </button>
-            <button 
-              onClick={() => {
-                console.log('🔍 수동 디버깅:');
-                console.log('- document.cookie:', document.cookie);
-                console.log('- localStorage keys:', Object.keys(localStorage));
-                console.log('- login_web_app_tokens:', localStorage.getItem('login_web_app_tokens'));
-                
-                // 모든 쿠키 이름 확인
-                const allCookies = document.cookie.split(';');
-                const cookieNames = allCookies.map(c => c.trim().split('=')[0]);
-                console.log('- 모든 쿠키 이름들:', cookieNames);
-                
-                alert('콘솔을 확인하세요!');
-              }}
-              className="action-btn"
-            >
-              🔍 디버깅 정보
-            </button>
-          </div>
-        </div>
-
-        {/* API 테스트 */}
-        <div className="api-test">
-          <h3>🧪 API 테스트</h3>
-          <p>실제 백엔드와 연동하여 토큰 기반 인증을 테스트할 수 있습니다.</p>
-          <div className="test-info">
-            <p>✅ 웹 플랫폼 (쿠키 기반 Refresh Token)</p>
-            <p>✅ X-Client-Type: web 헤더 자동 설정</p>
-            <p>✅ credentials: 'include'로 쿠키 전송</p>
           </div>
         </div>
       </div>

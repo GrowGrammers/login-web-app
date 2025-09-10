@@ -63,11 +63,6 @@ export const getApiConfig = (): ApiConfig => {
   const env = getCurrentEnvironment();
   const config = API_CONFIGS[env];
   
-  console.log(`🔧 API 설정 로드됨 (${env}):`, {
-    baseUrl: config.apiBaseUrl,
-    timeout: config.timeout
-  });
-  
   return config;
 };
 
@@ -82,7 +77,6 @@ export const getGoogleConfig = () => ({
 // 개발용 환경변수 확인
 export const checkEnvironmentVariables = () => {
   const required = ['VITE_GOOGLE_CLIENT_ID'];
-  const frontend_optional = ['VITE_GOOGLE_REDIRECT_URI']; // 프론트엔드에서만 사용 (Google OAuth URL 생성용)
   const missing = required.filter(key => !import.meta.env[key]);
   
   if (missing.length > 0) {
@@ -93,10 +87,7 @@ export const checkEnvironmentVariables = () => {
     });
   }
   
-  if (frontend_optional.some(key => !import.meta.env[key])) {
-    console.info('💡 선택적 환경변수 (프론트엔드 전용, 기본값 사용 중):', 
-      frontend_optional.filter(key => !import.meta.env[key]));
-  }
+  // 선택적 환경변수는 기본값 사용
   
   return missing.length === 0;
 };

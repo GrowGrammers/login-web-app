@@ -5,7 +5,7 @@ import { getApiConfig, getGoogleConfig, checkEnvironmentVariables } from '../con
 
 // 전역 AuthManager 인스턴스
 let authManagerInstance: AuthManager | null = null;
-let currentProviderType: 'email' | 'google' = 'email';
+let currentProviderType: 'email' | 'google' = (localStorage.getItem('current_provider_type') as 'email' | 'google') || 'email';
 
 /**
  * 이메일 인증용 AuthManager 생성
@@ -75,6 +75,7 @@ export function getAuthManager(): AuthManager {
  */
 export function resetAuthManager(type: 'email' | 'google' = 'email'): AuthManager {
   currentProviderType = type; // 현재 provider type 업데이트
+  localStorage.setItem('current_provider_type', type); // localStorage에 저장
   
   if (type === 'google') {
     authManagerInstance = createGoogleAuthManager();
