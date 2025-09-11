@@ -38,13 +38,6 @@
     <script>
         (function() {
             try {
-                console.log('🚀 콜백 페이지 로드됨:', {
-                    url: window.location.href,
-                    origin: window.location.origin,
-                    hasOpener: !!window.opener
-                });
-                
-                // 페이지 로드 알림
                 alert('🚀 콜백 페이지가 로드되었습니다!');
 
                 const urlParams = new URLSearchParams(window.location.search);
@@ -52,22 +45,11 @@
                 const error = urlParams.get('error');
                 const statusElement = document.getElementById('status');
                 
-                console.log('📋 OAuth 콜백 처리:', { 
-                    code: code ? '받음' : '없음', 
-                    error,
-                    fullCode: code,
-                    hasOpener: !!window.opener,
-                    origin: window.location.origin,
-                    openerOrigin: window.opener ? window.opener.location.origin : 'N/A'
-                });
                 
                 if (code) {
                     // OAuth 진행 중인지 확인
                     const oauthInProgress = localStorage.getItem('oauth_in_progress');
                     const oauthProvider = localStorage.getItem('oauth_provider');
-                    
-                    console.log('OAuth 상태 확인:', { oauthInProgress, oauthProvider });
-                    alert('OAuth 상태: oauthInProgress=' + oauthInProgress + ', oauthProvider=' + oauthProvider);
                     
                     if (oauthInProgress === 'true' && oauthProvider === 'google') {
                         // localStorage에 인증 코드 저장하고 메인 페이지로 리다이렉트
@@ -78,26 +60,15 @@
                         statusElement.textContent = '✅ 인증 성공! 메인 페이지로 이동합니다...';
                         statusElement.className = 'success';
                         
-                        console.log('✅ 인증 코드를 localStorage에 저장하고 메인 페이지로 이동');
-                        alert('✅ 인증 코드를 localStorage에 저장했습니다: ' + code.substring(0, 10) + '...');
-                        
                         setTimeout(() => {
                             window.location.href = '/';
                         }, 2000);
                     } else if (window.opener) {
-                        // 팝업 모드 (기존 로직)
-                        console.log('부모 창에 OAuth 성공 메시지 전송:', {
-                            type: 'OAUTH_SUCCESS',
-                            code: code.substring(0, 20) + '...',
-                            origin: window.location.origin
-                        });
                         try {
                             window.opener.postMessage({
                                 type: 'OAUTH_SUCCESS',
                                 code: code
                             }, window.location.origin);
-                            console.log('✅ postMessage 전송 완료');
-                            alert('✅ 부모창에 메시지 전송 완료!');
                         } catch (postError) {
                             console.error('❌ postMessage 전송 실패:', postError);
                             alert('❌ postMessage 전송 실패: ' + postError.message);
