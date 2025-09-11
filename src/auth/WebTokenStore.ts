@@ -15,7 +15,7 @@ export class WebTokenStore implements TokenStore {
   async saveToken(token: Token): Promise<SaveTokenResponse> {
     try {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(token));
-      console.log('✅ 토큰 저장 완료');
+      //console.log('✅ 토큰 저장 완료');
       return { success: true, message: '토큰이 성공적으로 저장되었습니다.', data: undefined };
     } catch (error) {
       console.error('❌ 토큰 저장 실패:', error);
@@ -42,7 +42,7 @@ export class WebTokenStore implements TokenStore {
   async removeToken(): Promise<RemoveTokenResponse> {
     try {
       localStorage.removeItem(this.STORAGE_KEY);
-      console.log('✅ 토큰 삭제 완료');
+      //console.log('✅ 토큰 삭제 완료');
       return { success: true, message: '토큰이 성공적으로 삭제되었습니다.', data: undefined };
     } catch (error) {
       console.error('❌ 토큰 삭제 실패:', error);
@@ -94,7 +94,7 @@ export class WebTokenStore implements TokenStore {
   async clear(): Promise<ClearResponse> {
     try {
       localStorage.removeItem(this.STORAGE_KEY);
-      console.log('✅ 저장소 초기화 완료');
+      //console.log('✅ 저장소 초기화 완료');
       return { success: true, message: '저장소가 성공적으로 초기화되었습니다.', data: undefined };
     } catch (error) {
       console.error('❌ 저장소 초기화 실패:', error);

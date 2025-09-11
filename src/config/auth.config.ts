@@ -14,15 +14,15 @@ const API_CONFIGS = {
       logout: '/api/v1/auth/members/logout',
       refresh: '/api/v1/auth/members/refresh',
       validate: '/api/v1/auth/validate-token',
-      me: '/api/v1/auth/user-info',
+      me: '/api/v1/auth/members/user-info',
       health: '/api/v1/health',
 
       // Google OAuth 엔드포인트
       googleLogin: '/api/v1/auth/google/login',
       googleLogout: '/api/v1/auth/google/logout',
-      googleRefresh: '/api/v1/auth/google/refresh',
+      googleRefresh: '/api/v1/auth/members/refresh',
       googleValidate: '/api/v1/auth/google/validate',
-      googleUserinfo: '/api/v1/auth/google/userinfo'
+      googleUserinfo: '/api/v1/auth/members/user-info'
     }
   },
   production: {
@@ -37,57 +37,63 @@ const API_CONFIGS = {
       logout: '/api/v1/auth/members/logout',
       refresh: '/api/v1/auth/members/refresh',
       validate: '/api/v1/auth/validate-token',
-      me: '/api/v1/auth/user-info',
+      me: '/api/v1/auth/members/user-info',
       health: '/api/v1/health',
 
       // Google OAuth 엔드포인트
       googleLogin: '/api/v1/auth/google/login',
       googleLogout: '/api/v1/auth/google/logout',
-      googleRefresh: '/api/v1/auth/google/refresh',
+      googleRefresh: '/api/v1/auth/members/refresh',
       googleValidate: '/api/v1/auth/google/validate',
-      googleUserinfo: '/api/v1/auth/google/userinfo'
+      googleUserinfo: '/api/v1/auth/members/user-info'
     }
   }
 } as const;
 
 // 현재 환경 감지
-const getCurrentEnvironment = (): 'development' | 'production' => {
-  if (import.meta.env.MODE === 'production') {
-    return 'production';
+const getCurrentEnvironment = () => {
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return 'development' as const;
   }
-  return 'development';
+  return 'production' as const;
 };
 
-// 현재 환경의 API 설정 가져오기
-export const getApiConfig = (): ApiConfig => {
+/**
+ * API 설정 가져오기
+ */
+export function getApiConfig(): ApiConfig {
   const env = getCurrentEnvironment();
   const config = API_CONFIGS[env];
-  
-  return config;
-};
+  return {
+    apiBaseUrl: config.apiBaseUrl,
+    timeout: config.timeout,
+    retryCount: config.retryCount,
+    endpoints: { ...config.endpoints }
+  };
+}
 
-// Google OAuth 설정 (환경변수에서 로드)
-export const getGoogleConfig = () => ({
-  googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-google-client-id',
-  // redirectUri는 백엔드에서 환경변수로 관리
-  timeout: 10000,
-  retryCount: 3
-});
+/**
+ * Google OAuth 관련 환경변수 확인 (빌드 타임 체크)
+ */
+export function checkEnvironmentVariables() {
+  const requiredVars = [
+    'VITE_GOOGLE_CLIENT_ID'
+  ];
 
-// 개발용 환경변수 확인
-export const checkEnvironmentVariables = () => {
-  const required = ['VITE_GOOGLE_CLIENT_ID'];
-  const missing = required.filter(key => !import.meta.env[key]);
-  
-  if (missing.length > 0) {
-    console.warn('⚠️ 누락된 환경변수:', missing);
-    console.log('💡 .env 파일에 다음 변수들을 추가하세요:');
-    missing.forEach(key => {
-      console.log(`${key}=your_value_here`);
-    });
+  const missingVars = requiredVars.filter((v) => !import.meta.env[v as 'VITE_GOOGLE_CLIENT_ID']);
+
+  if (missingVars.length > 0) {
+    console.warn('⚠️ 누락된 환경변수:', missingVars.join(', '));
   }
-  
-  // 선택적 환경변수는 기본값 사용
-  
-  return missing.length === 0;
-};
+}
+
+/**
+ * Google 관련 설정 가져오기
+ */
+export function getGoogleConfig() {
+  return {
+    googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+    timeout: API_CONFIGS[getCurrentEnvironment()].timeout,
+    retryCount: API_CONFIGS[getCurrentEnvironment()].retryCount
+  } as const;
+}

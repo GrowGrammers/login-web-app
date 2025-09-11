@@ -74,6 +74,8 @@ function AppContent() {
       // 처리 중 플래그 설정 (이중 보안)
       localStorage.setItem('oauth_processing', 'true');
       globalOAuthProcessing = true;
+      // 스플래시는 숨기되, 전역 로딩 화면은 사용하지 않음
+      setShowSplash(false);
       
       try {
         // Google AuthManager 설정 및 로그인 처리
@@ -104,6 +106,7 @@ function AppContent() {
         localStorage.removeItem('google_oauth_state');
         localStorage.removeItem('oauth_processing');
         globalOAuthProcessing = false;
+        // 전역 로딩 해제 불필요 (전역 로딩을 사용하지 않음)
       }
     } else if (googleAuthCode && !codeVerifier) {
       console.warn('authCode는 있지만 codeVerifier가 없습니다. PKCE 플로우가 제대로 작동하지 않았을 수 있습니다.');
@@ -137,12 +140,12 @@ function AppContent() {
 
   const handleStartApp = () => {
     setShowSplash(false);
-    navigate('/');
+    navigate('/start');
   };
 
   const handleBackToSplash = () => {
     setShowSplash(true);
-    navigate('/splash');
+    navigate('/');
   };
 
   const handleLoginSuccess = async () => {
@@ -184,7 +187,8 @@ function AppContent() {
         // 인증 상태 업데이트 및 스플래시 화면으로 돌아가기
         setIsAuthenticated(false);
         setShowSplash(true);
-        navigate('/splash');
+        alert('✅ 로그아웃되었습니다.');
+        navigate('/');
         
       } else {
         // 이메일 로그인: 백엔드 API 호출
@@ -197,7 +201,8 @@ function AppContent() {
           localStorage.removeItem('current_provider_type');
           setIsAuthenticated(false);
           setShowSplash(true);
-          navigate('/splash');
+          alert('✅ 로그아웃되었습니다.');
+          navigate('/');
         } else {
           console.error('❌ 로그아웃 실패:', result.message);
           alert('로그아웃에 실패했습니다: ' + result.message);
@@ -210,7 +215,7 @@ function AppContent() {
         // 구글 로그인의 경우 오류가 있어도 스플래시 화면으로 돌아가기
         setIsAuthenticated(false);
         setShowSplash(true);
-        navigate('/splash');
+        navigate('/');
       } else {
         alert('로그아웃 중 오류가 발생했습니다.');
       }
@@ -230,9 +235,9 @@ function AppContent() {
   }
 
   // 스플래시 화면 표시 조건
-  if (showSplash || location.pathname === '/splash') {
+  if (showSplash || location.pathname === '/') {
     return (
-      <div className="min-h-screen flex flex-col max-w-2xl mx-auto bg-white border-l border-r border-gray-200 shadow-xl">
+      <div className="min-h-screen flex flex-col max-w-xl mx-auto bg-white border-l border-r border-gray-200 shadow-xl">
         <div className="min-h-screen flex flex-col justify-center items-center p-8 text-center">
           <h3 className="text-3xl font-bold text-gray-900 mb-4">Login</h3>
           <button 
@@ -247,35 +252,32 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col max-w-2xl mx-auto bg-white border-l border-r border-gray-200 shadow-xl">
+    <div className="min-h-screen flex flex-col max-w-xl mx-auto bg-white border-l border-r border-gray-200 shadow-xl">
       {/* 인증 상태 헤더 */}
-      <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+      <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-center justify-center relative">
         {/* 뒤로가기 버튼 - 시작하기 페이지가 아닐 때만 표시 */}
-        {location.pathname !== '/' && (
+        {location.pathname !== '/start' && (
           <button 
-            className="bg-transparent border-0 text-2xl cursor-pointer text-gray-600 hover:text-gray-900"
-            onClick={() => navigate('/')}
+            className="absolute left-4 bg-transparent border-0 text-2xl cursor-pointer text-gray-600 hover:text-gray-900"
+            onClick={() => navigate('/start')}
           >
             ←
           </button>
         )}
         
-        {/* 인증 상태 - 시작하기 페이지일 때는 중앙 정렬 */}
+        {/* 인증 상태 - 항상 중앙 정렬 */}
         <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-medium text-sm ${
           isAuthenticated 
             ? 'bg-green-100 text-green-800' 
             : 'bg-red-100 text-red-800'
-        } ${location.pathname === '/' ? 'mx-auto' : ''}`}>
+        }`}>
           {isAuthenticated ? '🟢 인증됨' : '🔴 미인증'}
         </span>
-        
-        {/* 오른쪽 공간 (균형을 위해) - 시작하기 페이지가 아닐 때만 */}
-        {location.pathname !== '/' && <div className="w-8"></div>}
       </div>
 
       <main className="flex-1 flex flex-col">
         <Routes>
-          <Route path="/" element={<LoginSelector onBack={handleBackToSplash} />} />
+          <Route path="/start" element={<LoginSelector onBack={handleBackToSplash} />} />
           <Route path="/login/email" element={<EmailLogin onLoginSuccess={handleLoginSuccess} />} />
           <Route path="/login/google" element={<GoogleLogin />} />
           <Route path="/dashboard" element={<Dashboard onLogout={handleLogout} />} />
