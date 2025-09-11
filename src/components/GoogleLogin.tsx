@@ -34,7 +34,6 @@ const GoogleLogin = () => {
   useEffect(() => {
     resetAuthManager('google');
     setMessage('');
-    console.log('🔄 AuthManager 초기화: google');
   }, []);
 
   const handleGoogleLogin = async () => {
@@ -92,7 +91,7 @@ const GoogleLogin = () => {
 
 
   return (
-    <div className="min-h-screen flex flex-col bg-white w-full border-l border-r border-gray-200 shadow-xl">
+    <div className="h-full flex flex-col bg-white w-full border-l border-r border-gray-200">
 
       {/* 헤더 */}
       <div className="px-4 py-16 pb-4 text-center">
@@ -100,8 +99,8 @@ const GoogleLogin = () => {
         <p className="text-sm text-gray-600">Google 계정으로 빠르게 로그인하세요</p>
       </div>
 
-      <div className="flex-1 px-8 pb-8 flex flex-col w-full">
-        <div className="flex-1 flex flex-col gap-8">
+      <div className="flex-1 px-8 pb-4 flex flex-col w-full">
+        <div className="flex-1 flex flex-col gap-4">
           <div className="flex flex-col w-full">
             {/* 메시지 표시 */}
             {message && (
@@ -122,13 +121,6 @@ const GoogleLogin = () => {
               {isLoading ? 'Google 인증 중...' : 'Google로 계속하기'}
             </button>
           </div>
-        </div>
-
-        {/* 개발 정보 */}
-        <div className="mt-auto p-4 bg-gray-100 rounded-lg border-l-4 border-gray-500">
-          <h4 className="mb-2 text-gray-900 text-sm">🛠️ 개발 정보</h4>
-          <p className="my-1 text-xs text-gray-600"><strong>Provider:</strong> google</p>
-          <p className="my-1 text-xs text-gray-600"><strong>Step:</strong> oauth</p>
         </div>
       </div>
     </div>

@@ -77,7 +77,6 @@ const EmailLogin = ({ onLoginSuccess }: EmailLoginProps) => {
     setStep('email');
     setMessage('');
     setFormData({ email: '', verifyCode: '' });
-    console.log('🔄 AuthManager 초기화: email');
   }, []);
 
   const requestEmailVerification = async () => {
@@ -98,7 +97,7 @@ const EmailLogin = ({ onLoginSuccess }: EmailLoginProps) => {
       });
 
       if (result.success) {
-        console.log('✅ 이메일 인증번호 요청 성공');
+        //console.log('✅ 이메일 인증번호 요청 성공');
       } else {
         setMessage(`❌ ${result.message}`);
         console.error('❌ 이메일 인증번호 요청 실패:', result.error);
@@ -130,7 +129,6 @@ const EmailLogin = ({ onLoginSuccess }: EmailLoginProps) => {
 
       if (result.success) {
         setMessage('✅ 로그인 성공!');
-        console.log('✅ 로그인 성공:', result.data);
         setTimeout(() => onLoginSuccess(), 1000);
       } else {
         setMessage(`❌ ${result.message}`);
@@ -153,7 +151,7 @@ const EmailLogin = ({ onLoginSuccess }: EmailLoginProps) => {
 
 
   return (
-    <div className="min-h-screen flex flex-col bg-white w-full border-l border-r border-gray-200 shadow-xl">
+    <div className="h-full flex flex-col bg-white w-full border-l border-r border-gray-200">
 
       {/* 헤더 - 인증번호 입력 단계에서는 숨김 */}
       {step === 'email' && (
@@ -163,8 +161,8 @@ const EmailLogin = ({ onLoginSuccess }: EmailLoginProps) => {
         </div>
       )}
 
-      <div className="flex-1 px-8 pb-8 flex flex-col w-full">
-        <div className="flex-1 flex flex-col gap-8">
+      <div className="flex-1 px-8 pb-4 flex flex-col w-full">
+        <div className="flex-1 flex flex-col gap-4">
           {step === 'email' ? (
             <div className="flex flex-col w-full">
               <input
@@ -197,8 +195,8 @@ const EmailLogin = ({ onLoginSuccess }: EmailLoginProps) => {
               </button>
             </div>
           ) : (
-            <div className="text-center py-8 flex flex-col w-full">
-              <div className="flex flex-col gap-6">
+            <div className="text-center py-4 flex flex-col w-full">
+              <div className="flex flex-col gap-4">
                 <div className="mb-4">
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">인증번호 입력</h3>
                   <p className="text-sm text-gray-600 mb-0">({formData.email})로 인증번호를 보냈습니다</p>
@@ -257,13 +255,6 @@ const EmailLogin = ({ onLoginSuccess }: EmailLoginProps) => {
               </div>
             </div>
           )}
-        </div>
-
-        {/* 개발 정보 */}
-        <div className="mt-auto p-4 bg-gray-100 rounded-lg border-l-4 border-gray-500">
-          <h4 className="mb-2 text-gray-900 text-sm">🛠️ 개발 정보</h4>
-          <p className="my-1 text-xs text-gray-600"><strong>Provider:</strong> email</p>
-          <p className="my-1 text-xs text-gray-600"><strong>Step:</strong> {step}</p>
         </div>
       </div>
     </div>
