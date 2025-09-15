@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { checkAuthStatus, getAuthManager, getCurrentProviderType } from './auth/authManager';
+import { initializeTokenRefreshService } from './auth/TokenRefreshService';
 import LoginSelector from './components/LoginSelector';
 import EmailLogin from './components/EmailLogin';
 import GoogleLogin from './components/GoogleLogin';
@@ -92,6 +93,8 @@ function AppContent() {
         
         if (result.success) {
           setIsAuthenticated(true);
+          // 로그인 성공 시 토큰 갱신 서비스 시작
+          initializeTokenRefreshService();
           setShowSplash(false);
           navigate('/dashboard');
         } else {
@@ -121,6 +124,8 @@ function AppContent() {
       setIsAuthenticated(status.isAuthenticated);
       
       if (status.isAuthenticated) {
+        // 인증된 상태이면 토큰 갱신 서비스 시작
+        initializeTokenRefreshService();
         setShowSplash(false);
         // 인증된 상태이면 대시보드로 리다이렉트
         navigate('/dashboard');
@@ -151,6 +156,8 @@ function AppContent() {
   const handleLoginSuccess = async () => {
     // 로그인 성공, 인증 상태 업데이트
     setIsAuthenticated(true);
+    // 로그인 성공 시 토큰 갱신 서비스 시작
+    initializeTokenRefreshService();
     navigate('/dashboard');
     
     // 잠시 후 토큰 상태를 확인하여 UI 업데이트

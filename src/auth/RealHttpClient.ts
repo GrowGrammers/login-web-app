@@ -1,4 +1,5 @@
 import type { HttpClient, HttpRequestConfig, HttpResponse } from 'auth-core';
+import { getTokenRefreshService } from './TokenRefreshService';
 
 // Helpers
 function isFormData(v: unknown): v is FormData {
@@ -26,7 +27,7 @@ function normalizeBody(body: unknown): { payload: BodyInit | undefined; contentT
 
   if (isFormData(body)) return { payload: body, contentType: null };
   if (isBlob(body)) return { payload: body, contentType: body.type || null };
-  if (isArrayBufferLike(body)) return { payload: body, contentType: null };
+  if (isArrayBufferLike(body)) return { payload: body as BodyInit, contentType: null };
 
   if (typeof body === 'object') {
     // 객체/배열만 허용
@@ -49,6 +50,9 @@ function normalizeBody(body: unknown): { payload: BodyInit | undefined; contentT
 export class RealHttpClient implements HttpClient {
   async request(config: HttpRequestConfig): Promise<HttpResponse> {
     try {
+      // 토큰이 필요한 API 요청 전에 토큰 만료 체크 및 갱신
+      await this.checkAndRefreshTokenIfNeeded(config.url);
+      
       const { method = 'GET', url, headers = {}, body, timeout = 10000 } = config;
 
       // GET/HEAD는 바디 금지
@@ -130,6 +134,36 @@ export class RealHttpClient implements HttpClient {
         json: async () => ({ error: error instanceof Error ? error.message : '알 수 없는 오류' }),
         text: async () => (error instanceof Error ? error.message : '알 수 없는 오류')
       };
+    }
+  }
+
+  /**
+   * 토큰이 필요한 API 요청인지 확인하고 필요시 토큰 갱신
+   */
+  private async checkAndRefreshTokenIfNeeded(url: string): Promise<void> {
+    try {
+      // 토큰이 필요하지 않은 API들 (로그인, 회원가입, 공개 API 등)
+      const publicEndpoints = [
+        '/auth/email/request-verification',
+        '/auth/email/verify',
+        '/auth/email/login',
+        '/auth/google/authorize',
+        '/auth/google/login',
+        '/auth/refresh', // 갱신 API는 제외
+        '/health'
+      ];
+
+      // 공개 엔드포인트이거나 상대 경로가 아닌 경우 토큰 체크 안함
+      const isPublicEndpoint = publicEndpoints.some(endpoint => url.includes(endpoint));
+      if (isPublicEndpoint || !url.startsWith('/api')) {
+        return;
+      }
+
+      // 토큰 갱신 서비스를 통해 필요시 갱신
+      const tokenRefreshService = getTokenRefreshService();
+      await tokenRefreshService.refreshToken();
+    } catch {
+      // 토큰 갱신 실패 시에도 원래 요청은 진행 (서버에서 401 처리)
     }
   }
 }
