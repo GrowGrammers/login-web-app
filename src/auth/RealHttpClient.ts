@@ -166,17 +166,12 @@ export class RealHttpClient implements HttpClient {
       // 토큰 갱신 체크를 건너뛸 API인지 확인
       const shouldSkipTokenCheck = skipTokenCheckEndpoints.some(endpoint => url.includes(endpoint));
       if (shouldSkipTokenCheck || !url.startsWith('/api')) {
-        console.log('[RealHttpClient] 토큰 체크 건너뜀:', url);
         return;
       }
 
-      console.log('[RealHttpClient] 🔍 토큰 체크 시작:', url);
-      
       // 토큰 갱신 서비스를 통해 필요시 갱신
       const tokenRefreshService = getTokenRefreshService();
-      const refreshResult = await tokenRefreshService.refreshToken();
-      
-      console.log('[RealHttpClient] 토큰 갱신 결과:', refreshResult);
+      await tokenRefreshService.refreshToken();
     } catch (error) {
       console.error('[RealHttpClient] 토큰 갱신 중 오류:', error);
       // 토큰 갱신 실패 시에도 원래 요청은 진행 (서버에서 401 처리)

@@ -118,7 +118,6 @@ export class TokenRefreshService {
       const tokenResult = await authManager.getToken();
 
       if (!tokenResult.success || !tokenResult.data || !tokenResult.data.accessToken) {
-        console.log('[TokenRefreshService] 토큰이 없어서 갱신하지 않음');
         return false; // 토큰이 없으면 갱신하지 않음
       }
 
@@ -130,37 +129,18 @@ export class TokenRefreshService {
       if (!expireTime) {
         // JWT 파싱 실패시 expiredAt 폴백 사용
         if (!token.expiredAt) {
-          console.log('[TokenRefreshService] JWT 파싱 실패 + expiredAt 없음, 갱신하지 않음');
           return false; // 만료 시간 정보가 없으면 갱신하지 않음
         }
         const now = Date.now();
         const thresholdTime = this.config.refreshThresholdMinutes * 60 * 1000;
-        const shouldRefresh = token.expiredAt - now <= thresholdTime;
-        console.log('[TokenRefreshService] expiredAt 폴백 사용:', {
-          expiredAt: new Date(token.expiredAt).toLocaleString(),
-          remainingMs: token.expiredAt - now,
-          remainingMinutes: Math.floor((token.expiredAt - now) / (60 * 1000)),
-          thresholdMinutes: this.config.refreshThresholdMinutes,
-          shouldRefresh
-        });
-        return shouldRefresh;
+        return token.expiredAt - now <= thresholdTime;
       }
 
       const now = Date.now();
       const thresholdTime = this.config.refreshThresholdMinutes * 60 * 1000;
-      const remainingMs = expireTime - now;
-      const shouldRefresh = remainingMs <= thresholdTime;
-
-      console.log('[TokenRefreshService] JWT 기반 갱신 체크:', {
-        expiredAt: new Date(expireTime).toLocaleString(),
-        remainingMs,
-        remainingMinutes: Math.floor(remainingMs / (60 * 1000)),
-        thresholdMinutes: this.config.refreshThresholdMinutes,
-        shouldRefresh
-      });
 
       // 만료 임계값에 도달했는지 확인
-      return shouldRefresh;
+      return expireTime - now <= thresholdTime;
     } catch (error) {
       console.error('[TokenRefreshService] 토큰 갱신 필요성 확인 중 오류:', error);
       return false;
@@ -172,7 +152,6 @@ export class TokenRefreshService {
    */
   private async performRefresh(): Promise<boolean> {
     try {
-      console.log('[TokenRefreshService] 🔄 토큰 갱신 시작');
       const authManager = getAuthManager();
       
       // 웹에서는 refreshToken을 쿠키로 관리하므로 현재 provider 타입으로 갱신
@@ -182,10 +161,9 @@ export class TokenRefreshService {
       });
 
       if (refreshResult.success) {
-        console.log('[TokenRefreshService] ✅ 토큰 갱신 성공');
         return true;
       } else {
-        console.error('[TokenRefreshService] ❌ 토큰 갱신 실패:', refreshResult.error);
+        console.error('[TokenRefreshService] 토큰 갱신 실패:', refreshResult.error);
         
         // 갱신 실패 시 로그아웃 처리
         await this.handleRefreshFailure();
