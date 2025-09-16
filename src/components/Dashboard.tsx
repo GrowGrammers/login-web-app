@@ -10,7 +10,7 @@ interface DashboardProps {
 }
 
 interface UserInfo {
-  id: string;
+  id?: string;
   email: string;
   nickname?: string;
   provider: string;
@@ -78,7 +78,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
             id: 'demo-user',
             email: currentProvider === 'google' ? 'demo@gmail.com' : 'demo@example.com',
             nickname: currentProvider === 'google' ? 'Google 데모 사용자' : '이메일 데모 사용자',
-            provider: currentProvider
+            provider: getCurrentProviderType()
           });
         }
       } catch (userError) {
@@ -89,7 +89,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
           id: 'demo-user',
           email: currentProvider === 'google' ? 'demo@gmail.com' : 'demo@example.com',
           nickname: currentProvider === 'google' ? 'Google 데모 사용자' : '이메일 데모 사용자',
-          provider: currentProvider
+          provider: getCurrentProviderType()
         });
       }
     } catch (error) {
@@ -202,10 +202,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                 </div>
               )}
               <p className="my-3 text-sm flex justify-between items-center">
-                <strong className="text-gray-900 font-semibold min-w-[80px]">ID:</strong> 
-                {userInfo.id}
-              </p>
-              <p className="my-3 text-sm flex justify-between items-center">
                 <strong className="text-gray-900 font-semibold min-w-[80px]">이메일:</strong> 
                 {userInfo.email}
               </p>
@@ -215,7 +211,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               </p>
               <p className="my-3 text-sm flex justify-between items-center">
                 <strong className="text-gray-900 font-semibold min-w-[80px]">Provider:</strong> 
-                {userInfo.provider}
+                {getCurrentProviderType()}
               </p>
             </div>
           ) : (
