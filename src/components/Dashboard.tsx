@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getAuthManager, getCurrentProviderType } from '../auth/authManager';
 import { getTokenRefreshService } from '../auth/TokenRefreshService';
+import { isJWTExpired } from '../auth/jwtUtils';
 
 // HttpOnly 쿠키는 JavaScript에서 접근할 수 없으므로 쿠키 읽기 함수는 사용하지 않음
 
@@ -66,6 +67,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       // 사용자 정보 가져오기 (백엔드 미완성으로 인한 임시 처리)
       try {
         const userResult = await authManager.getCurrentUserInfo();
+        
         if (userResult.success && userResult.data) {
           setUserInfo(userResult.data);
         } else {
@@ -137,11 +139,19 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       const hasToken = tokenResult.success && !!tokenResult.data;
       let isTokenExpired = true;
       
-      if (hasToken && tokenResult.data) {
-        if (tokenResult.data.expiredAt) {
-          isTokenExpired = Date.now() > tokenResult.data.expiredAt;
+      if (hasToken && tokenResult.data && tokenResult.data.accessToken) {
+        // JWT에서 직접 만료 확인
+        const jwtExpired = isJWTExpired(tokenResult.data.accessToken);
+        
+        if (jwtExpired !== null) {
+          isTokenExpired = jwtExpired;
         } else {
-          isTokenExpired = false;
+          // JWT 파싱 실패시 expiredAt 폴백 사용
+          if (tokenResult.data.expiredAt) {
+            isTokenExpired = Date.now() > tokenResult.data.expiredAt;
+          } else {
+            isTokenExpired = false;
+          }
         }
       }
       

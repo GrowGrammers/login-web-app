@@ -2,6 +2,7 @@ import { AuthManager } from 'auth-core';
 import { WebTokenStore } from './WebTokenStore';
 import { RealHttpClient } from './RealHttpClient';
 import { getApiConfig, getGoogleConfig, checkEnvironmentVariables } from '../config/auth.config';
+import { isJWTExpired } from './jwtUtils';
 
 // 전역 AuthManager 인스턴스
 let authManagerInstance: AuthManager | null = null;
@@ -112,11 +113,19 @@ export async function checkAuthStatus(): Promise<{
     
     // 토큰 만료 확인 (토큰이 있을 때만)
     let isTokenExpired = true;
-    if (hasToken && tokenResult.data) {
-      if (tokenResult.data.expiredAt) {
-        isTokenExpired = Date.now() > tokenResult.data.expiredAt;
+    if (hasToken && tokenResult.data && tokenResult.data.accessToken) {
+      // JWT에서 직접 만료 확인
+      const jwtExpired = isJWTExpired(tokenResult.data.accessToken);
+      
+      if (jwtExpired !== null) {
+        isTokenExpired = jwtExpired;
       } else {
-        isTokenExpired = false; // expiredAt이 없으면 만료되지 않은 것으로 간주
+        // JWT 파싱 실패시 expiredAt 폴백 사용
+        if (tokenResult.data.expiredAt) {
+          isTokenExpired = Date.now() > tokenResult.data.expiredAt;
+        } else {
+          isTokenExpired = false; // 둘 다 없으면 만료되지 않은 것으로 간주
+        }
       }
     }
     

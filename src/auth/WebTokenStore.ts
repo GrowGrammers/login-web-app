@@ -8,6 +8,7 @@ import type {
   IsTokenExpiredResponse, 
   ClearResponse 
 } from 'auth-core';
+import { isJWTExpired } from './jwtUtils';
 
 export class WebTokenStore implements TokenStore {
   private readonly STORAGE_KEY = 'login_web_app_tokens';
@@ -76,14 +77,23 @@ export class WebTokenStore implements TokenStore {
       
       const token = JSON.parse(stored);
       
-      // JWT 토큰 만료 시간 체크
-      if (token.expiredAt) {
-        const isExpired = Date.now() > token.expiredAt;
-        return { success: true, message: '토큰 만료 여부를 확인했습니다.', data: isExpired };
+      if (!token.accessToken) {
+        return { success: true, message: '토큰이 없습니다.', data: true };
       }
       
-      // expiredAt이 없으면 토큰 자체 존재 여부로 판단
-      const isExpired = !token.accessToken;
+      // JWT에서 직접 만료 시간 확인
+      const isExpired = isJWTExpired(token.accessToken);
+      
+      if (isExpired === null) {
+        // JWT 파싱 실패시 expiredAt 폴백 사용
+        if (token.expiredAt) {
+          const expired = Date.now() > token.expiredAt;
+          return { success: true, message: '토큰 만료 여부를 확인했습니다.', data: expired };
+        }
+        // 둘 다 없으면 만료되지 않은 것으로 간주
+        return { success: true, message: '토큰 만료 여부를 확인했습니다.', data: false };
+      }
+      
       return { success: true, message: '토큰 만료 여부를 확인했습니다.', data: isExpired };
     } catch (error) {
       console.error('❌ 토큰 만료 확인 실패:', error);

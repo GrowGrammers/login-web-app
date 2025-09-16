@@ -1,4 +1,5 @@
 import { getAuthManager, getCurrentProviderType } from './authManager';
+import { getExpirationFromJWT, getTimeUntilExpiryFromJWT } from './jwtUtils';
 
 interface TokenRefreshConfig {
   refreshThresholdMinutes: number; // 만료 몇 분 전에 갱신할지
@@ -116,23 +117,50 @@ export class TokenRefreshService {
       const authManager = getAuthManager();
       const tokenResult = await authManager.getToken();
 
-      if (!tokenResult.success || !tokenResult.data) {
+      if (!tokenResult.success || !tokenResult.data || !tokenResult.data.accessToken) {
+        console.log('[TokenRefreshService] 토큰이 없어서 갱신하지 않음');
         return false; // 토큰이 없으면 갱신하지 않음
       }
 
       const token = tokenResult.data;
       
-      // 만료 시간이 없으면 갱신하지 않음
-      if (!token.expiredAt) {
-        return false;
+      // JWT에서 만료 시간 추출
+      const expireTime = getExpirationFromJWT(token.accessToken);
+      
+      if (!expireTime) {
+        // JWT 파싱 실패시 expiredAt 폴백 사용
+        if (!token.expiredAt) {
+          console.log('[TokenRefreshService] JWT 파싱 실패 + expiredAt 없음, 갱신하지 않음');
+          return false; // 만료 시간 정보가 없으면 갱신하지 않음
+        }
+        const now = Date.now();
+        const thresholdTime = this.config.refreshThresholdMinutes * 60 * 1000;
+        const shouldRefresh = token.expiredAt - now <= thresholdTime;
+        console.log('[TokenRefreshService] expiredAt 폴백 사용:', {
+          expiredAt: new Date(token.expiredAt).toLocaleString(),
+          remainingMs: token.expiredAt - now,
+          remainingMinutes: Math.floor((token.expiredAt - now) / (60 * 1000)),
+          thresholdMinutes: this.config.refreshThresholdMinutes,
+          shouldRefresh
+        });
+        return shouldRefresh;
       }
 
       const now = Date.now();
-      const expireTime = token.expiredAt;
       const thresholdTime = this.config.refreshThresholdMinutes * 60 * 1000;
+      const remainingMs = expireTime - now;
+      const shouldRefresh = remainingMs <= thresholdTime;
+
+      console.log('[TokenRefreshService] JWT 기반 갱신 체크:', {
+        expiredAt: new Date(expireTime).toLocaleString(),
+        remainingMs,
+        remainingMinutes: Math.floor(remainingMs / (60 * 1000)),
+        thresholdMinutes: this.config.refreshThresholdMinutes,
+        shouldRefresh
+      });
 
       // 만료 임계값에 도달했는지 확인
-      return expireTime - now <= thresholdTime;
+      return shouldRefresh;
     } catch (error) {
       console.error('[TokenRefreshService] 토큰 갱신 필요성 확인 중 오류:', error);
       return false;
@@ -144,6 +172,7 @@ export class TokenRefreshService {
    */
   private async performRefresh(): Promise<boolean> {
     try {
+      console.log('[TokenRefreshService] 🔄 토큰 갱신 시작');
       const authManager = getAuthManager();
       
       // 웹에서는 refreshToken을 쿠키로 관리하므로 현재 provider 타입으로 갱신
@@ -153,9 +182,10 @@ export class TokenRefreshService {
       });
 
       if (refreshResult.success) {
+        console.log('[TokenRefreshService] ✅ 토큰 갱신 성공');
         return true;
       } else {
-        console.error('[TokenRefreshService] 토큰 갱신 실패:', refreshResult.error);
+        console.error('[TokenRefreshService] ❌ 토큰 갱신 실패:', refreshResult.error);
         
         // 갱신 실패 시 로그아웃 처리
         await this.handleRefreshFailure();
@@ -202,12 +232,26 @@ export class TokenRefreshService {
       const authManager = getAuthManager();
       const tokenResult = await authManager.getToken();
 
-      if (!tokenResult.success || !tokenResult.data?.expiredAt) {
+      if (!tokenResult.success || !tokenResult.data?.accessToken) {
+        return null;
+      }
+
+      const token = tokenResult.data;
+      
+      // JWT에서 직접 시간 계산
+      const remainingTime = getTimeUntilExpiryFromJWT(token.accessToken);
+      
+      if (remainingTime !== null) {
+        return remainingTime;
+      }
+      
+      // JWT 파싱 실패시 expiredAt 폴백 사용
+      if (!token.expiredAt) {
         return null;
       }
 
       const now = Date.now();
-      const expireTime = tokenResult.data.expiredAt;
+      const expireTime = token.expiredAt;
       const remainingMs = expireTime - now;
 
       return Math.max(0, Math.floor(remainingMs / (60 * 1000))); // 분 단위로 반환

@@ -1,5 +1,6 @@
 import type { HttpClient, HttpRequestConfig, HttpResponse } from 'auth-core';
 import { getTokenRefreshService } from './TokenRefreshService';
+import { getExpirationFromJWT } from './jwtUtils';
 
 // Helpers
 function isFormData(v: unknown): v is FormData {
@@ -40,6 +41,7 @@ function normalizeBody(body: unknown): { payload: BodyInit | undefined; contentT
     'Do NOT pass stringified JSON or primitives. Pass a plain object and the client will serialize it.'
   );
 }
+
 
 /**
  * 실제 백엔드와 연동하는 HTTP 클라이언트
@@ -104,9 +106,13 @@ export class RealHttpClient implements HttpClient {
           // WebTokenStore에 직접 저장
           try {
             const tokenStore = new (await import('./WebTokenStore')).WebTokenStore();
+            
+            // JWT에서 실제 만료 시간을 추출, 실패시 1시간 후로 폴백
+            const expiredAt = getExpirationFromJWT(accessToken) || Date.now() + (60 * 60 * 1000);
+            
             await tokenStore.saveToken({
               accessToken: accessToken,
-              expiredAt: Date.now() + (60 * 60 * 1000) // 1시간 후 만료로 임시 설정
+              expiredAt: expiredAt
             });
           } catch (tokenError) {
             console.error('❌ 수동 토큰 저장 실패:', tokenError);
@@ -142,27 +148,37 @@ export class RealHttpClient implements HttpClient {
    */
   private async checkAndRefreshTokenIfNeeded(url: string): Promise<void> {
     try {
-      // 토큰이 필요하지 않은 API들 (로그인, 회원가입, 공개 API 등)
-      const publicEndpoints = [
+      // 토큰 갱신 체크를 하지 않는 API들
+      const skipTokenCheckEndpoints = [
+        // 인증이 필요 없는 공개 API들
         '/auth/email/request-verification',
-        '/auth/email/verify',
+        '/auth/email/verify', 
         '/auth/email/login',
         '/auth/google/authorize',
         '/auth/google/login',
-        '/auth/refresh', // 갱신 API는 제외
-        '/health'
+        '/health',
+        
+        // 토큰 갱신 API들 (무한 루프 방지)
+        '/auth/refresh',
+        '/auth/members/refresh'
       ];
 
-      // 공개 엔드포인트이거나 상대 경로가 아닌 경우 토큰 체크 안함
-      const isPublicEndpoint = publicEndpoints.some(endpoint => url.includes(endpoint));
-      if (isPublicEndpoint || !url.startsWith('/api')) {
+      // 토큰 갱신 체크를 건너뛸 API인지 확인
+      const shouldSkipTokenCheck = skipTokenCheckEndpoints.some(endpoint => url.includes(endpoint));
+      if (shouldSkipTokenCheck || !url.startsWith('/api')) {
+        console.log('[RealHttpClient] 토큰 체크 건너뜀:', url);
         return;
       }
 
+      console.log('[RealHttpClient] 🔍 토큰 체크 시작:', url);
+      
       // 토큰 갱신 서비스를 통해 필요시 갱신
       const tokenRefreshService = getTokenRefreshService();
-      await tokenRefreshService.refreshToken();
-    } catch {
+      const refreshResult = await tokenRefreshService.refreshToken();
+      
+      console.log('[RealHttpClient] 토큰 갱신 결과:', refreshResult);
+    } catch (error) {
+      console.error('[RealHttpClient] 토큰 갱신 중 오류:', error);
       // 토큰 갱신 실패 시에도 원래 요청은 진행 (서버에서 401 처리)
     }
   }
