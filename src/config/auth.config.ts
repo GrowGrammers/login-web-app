@@ -3,7 +3,7 @@ import type { ApiConfig } from 'growgrammers-auth-core';
 // 환경별 API 설정
 const API_CONFIGS = {
   development: {
-    apiBaseUrl: '', // Vite 프록시 사용
+    apiBaseUrl: import.meta.env.VITE_API_BASE_URL || '', // 환경변수 또는 Vite 프록시 사용
     timeout: 10000,
     retryCount: 3,
     endpoints: {
@@ -26,7 +26,7 @@ const API_CONFIGS = {
     }
   },
   production: {
-    apiBaseUrl: 'https://your-production-api.com',
+    apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
     timeout: 15000,
     retryCount: 3,
     endpoints: {
@@ -73,14 +73,15 @@ export function getApiConfig(): ApiConfig {
 }
 
 /**
- * Google OAuth 관련 환경변수 확인 (빌드 타임 체크)
+ * 필수 환경변수 확인 (빌드 타임 체크)
  */
 export function checkEnvironmentVariables() {
   const requiredVars = [
+    'VITE_API_BASE_URL',
     'VITE_GOOGLE_CLIENT_ID'
   ];
 
-  const missingVars = requiredVars.filter((v) => !import.meta.env[v as 'VITE_GOOGLE_CLIENT_ID']);
+  const missingVars = requiredVars.filter((v) => !import.meta.env[v as keyof ImportMetaEnv]);
 
   if (missingVars.length > 0) {
     console.warn('⚠️ 누락된 환경변수:', missingVars.join(', '));
