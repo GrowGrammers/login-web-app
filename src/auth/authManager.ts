@@ -1,4 +1,4 @@
-import { AuthManager } from 'auth-core';
+import { AuthManager } from 'growgrammers-auth-core';
 import { WebTokenStore } from './WebTokenStore';
 import { RealHttpClient } from './RealHttpClient';
 import { getApiConfig, getGoogleConfig, checkEnvironmentVariables } from '../config/auth.config';

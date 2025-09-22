@@ -1,4 +1,4 @@
-import type { ApiConfig } from 'auth-core';
+import type { ApiConfig } from 'growgrammers-auth-core';
 
 // 환경별 API 설정
 const API_CONFIGS = {

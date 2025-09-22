@@ -7,7 +7,7 @@ import type {
   HasTokenResponse, 
   IsTokenExpiredResponse, 
   ClearResponse 
-} from 'auth-core';
+} from 'growgrammers-auth-core';
 import { isJWTExpired } from './jwtUtils';
 
 export class WebTokenStore implements TokenStore {

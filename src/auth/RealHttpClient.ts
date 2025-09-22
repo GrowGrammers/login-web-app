@@ -1,4 +1,4 @@
-import type { HttpClient, HttpRequestConfig, HttpResponse } from 'auth-core';
+import type { HttpClient, HttpRequestConfig, HttpResponse } from 'growgrammers-auth-core';
 import { getTokenRefreshService } from './TokenRefreshService';
 import { getExpirationFromJWT } from './jwtUtils';
 
