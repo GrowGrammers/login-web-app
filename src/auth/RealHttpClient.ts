@@ -1,6 +1,6 @@
 import type { HttpClient, HttpRequestConfig, HttpResponse } from 'growgrammers-auth-core';
 import { getTokenRefreshService } from './TokenRefreshService';
-import { getExpirationFromJWT } from './jwtUtils';
+import { getExpirationFromJWT } from '../utils/jwtUtils';
 
 // Helpers
 function isFormData(v: unknown): v is FormData {
@@ -76,7 +76,6 @@ export class RealHttpClient implements HttpClient {
         finalHeaders['Content-Type'] = contentType;
       }
 
-      // HTTP 요청 로깅 삭제 (production에서 비활성화)
 
       const response = await fetch(url, {
         method,
@@ -96,10 +95,18 @@ export class RealHttpClient implements HttpClient {
 
       const responseHeaders = Object.fromEntries(response.headers.entries());
       
-      // Google OAuth 로그인 응답의 Authorization 헤더에서 토큰 추출
-      if (url.includes('/auth/google/login') && response.ok && responseHeaders.authorization) {
+      // Authorization 헤더를 대소문자 구분 없이 찾기
+      const authHeaderValue = responseHeaders.authorization || 
+                              responseHeaders.Authorization || 
+                              responseHeaders['authorization'] || 
+                              responseHeaders['Authorization'];
+      
+      
+
+      // 로그인 응답의 Authorization 헤더에서 토큰 추출 (이메일, Google, Kakao, Naver 공통)
+      if ((url.includes('/auth/email/login') || url.includes('/auth/members/email-login') || url.includes('/auth/google/login') || url.includes('/auth/kakao/login') || url.includes('/auth/naver/login')) && response.ok && authHeaderValue) {
         // Authorization 헤더에서 Bearer 토큰 추출
-        const authHeader = responseHeaders.authorization;
+        const authHeader = authHeaderValue;
         if (authHeader.startsWith('Bearer ')) {
           const accessToken = authHeader.substring(7); // 'Bearer ' 제거
           
@@ -114,9 +121,14 @@ export class RealHttpClient implements HttpClient {
               accessToken: accessToken,
               expiredAt: expiredAt
             });
+            
+            // 토큰 저장 후 사용자 정보 가져오기
+            await this.fetchUserInfo(accessToken);
           } catch (tokenError) {
-            console.error('❌ 수동 토큰 저장 실패:', tokenError);
+            console.error('❌ 토큰 저장 실패:', tokenError);
           }
+        } else {
+          console.warn('⚠️ Authorization 헤더가 Bearer 형식이 아닙니다:', authHeader);
         }
       }
 
@@ -144,6 +156,36 @@ export class RealHttpClient implements HttpClient {
   }
 
   /**
+   * 사용자 정보 가져오기
+   */
+  private async fetchUserInfo(accessToken: string): Promise<void> {
+    try {
+      const userInfoResponse = await fetch('/api/v1/auth/members/user-info', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+          'X-Client-Type': 'web'
+        },
+        credentials: 'include'
+      });
+
+      if (userInfoResponse.ok) {
+        const userInfo = await userInfoResponse.json();
+        
+        // 사용자 정보를 localStorage에 저장 (data 부분만 저장)
+        if (userInfo.success && userInfo.data) {
+          localStorage.setItem('user_info', JSON.stringify(userInfo.data));
+        } else {
+          localStorage.setItem('user_info', JSON.stringify(userInfo));
+        }
+      }
+    } catch (error) {
+      console.error('❌ 사용자 정보 가져오기 중 오류:', error);
+    }
+  }
+
+  /**
    * 토큰이 필요한 API 요청인지 확인하고 필요시 토큰 갱신
    */
   private async checkAndRefreshTokenIfNeeded(url: string): Promise<void> {
@@ -154,8 +196,11 @@ export class RealHttpClient implements HttpClient {
         '/auth/email/request-verification',
         '/auth/email/verify', 
         '/auth/email/login',
+        '/auth/members/email-login',
         '/auth/google/authorize',
         '/auth/google/login',
+        '/auth/kakao/authorize',
+        '/auth/kakao/login',
         '/health',
         
         // 토큰 갱신 API들 (무한 루프 방지)

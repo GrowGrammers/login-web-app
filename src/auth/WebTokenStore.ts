@@ -8,7 +8,7 @@ import type {
   IsTokenExpiredResponse, 
   ClearResponse 
 } from 'growgrammers-auth-core';
-import { isJWTExpired } from './jwtUtils';
+import { isJWTExpired } from '../utils/jwtUtils';
 
 export class WebTokenStore implements TokenStore {
   private readonly STORAGE_KEY = 'login_web_app_tokens';

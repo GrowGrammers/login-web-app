@@ -1,16 +1,87 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { checkAuthStatus, getAuthManager, getCurrentProviderType } from './auth/authManager';
+import { handleOAuthLogout, handleEmailLogout, isOAuthProvider } from './utils/logoutUtils';
+import { processOAuthProvider, isOAuthCallbackPath, cleanupOAuthProgress } from './utils/oauthCallbackUtils';
 import { initializeTokenRefreshService } from './auth/TokenRefreshService';
+
+    /**
+     * 이메일 로그인 후 사용자 정보 가져오기
+     */
+    async function fetchUserInfoAfterEmailLogin(): Promise<void> {
+      try {
+        // 토큰이 저장될 때까지 잠시 대기
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // WebTokenStore에서 토큰 가져오기
+        const { WebTokenStore } = await import('./auth/WebTokenStore');
+        const tokenStore = new WebTokenStore();
+        const tokenResult = await tokenStore.getToken();
+        
+        if (tokenResult.success && tokenResult.data?.accessToken) {
+          const userInfoResponse = await fetch('/api/v1/auth/members/user-info', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${tokenResult.data.accessToken}`,
+              'Accept': 'application/json',
+              'X-Client-Type': 'web'
+            },
+            credentials: 'include'
+          });
+
+          if (userInfoResponse.ok) {
+            const userInfo = await userInfoResponse.json();
+            
+            // 사용자 정보를 localStorage에 저장 (data 부분만 저장)
+            if (userInfo.success && userInfo.data) {
+              localStorage.setItem('user_info', JSON.stringify(userInfo.data));
+            } else {
+              localStorage.setItem('user_info', JSON.stringify(userInfo));
+            }
+          }
+        } else {
+          // 토큰이 없어도 쿠키 기반으로 사용자 정보 가져오기 시도
+          try {
+            const userInfoResponse = await fetch('/api/v1/auth/members/user-info', {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'X-Client-Type': 'web'
+              },
+              credentials: 'include' // 쿠키 포함
+            });
+
+            if (userInfoResponse.ok) {
+              const userInfo = await userInfoResponse.json();
+              
+              // 사용자 정보를 localStorage에 저장 (data 부분만 저장)
+              if (userInfo.success && userInfo.data) {
+                localStorage.setItem('user_info', JSON.stringify(userInfo.data));
+              } else {
+                localStorage.setItem('user_info', JSON.stringify(userInfo));
+              }
+            }
+          } catch (cookieError) {
+            console.error('❌ 쿠키 기반 사용자 정보 가져오기 중 오류:', cookieError);
+          }
+        }
+      } catch (error) {
+        console.error('❌ 이메일 로그인 사용자 정보 가져오기 중 오류:', error);
+      }
+    }
 import LoginSelector from './components/LoginSelector';
 import EmailLogin from './components/EmailLogin';
-import GoogleLogin from './components/GoogleLogin';
+import GoogleLogin from './components/oauth/GoogleLogin';
+import KakaoLogin from './components/oauth/KakaoLogin';
+import NaverLogin from './components/oauth/NaverLogin';
 import Dashboard from './components/Dashboard';
-import GoogleCallback from './components/GoogleCallback';
+import GoogleCallback from './components/oauth/GoogleCallback';
+import KakaoCallback from './components/oauth/KakaoCallback';
+import NaverCallback from './components/oauth/NaverCallback';
 import './App.css';
 
 // 전역 OAuth 처리 상태 (React Strict Mode 대응)
-let globalOAuthProcessing = false;
+const globalOAuthProcessing = { value: false };
 
 // Main App 컴포넌트 (Router 내부)
 function AppContent() {
@@ -47,73 +118,45 @@ function AppContent() {
 
   // OAuth 콜백 처리 (localStorage에서 인증 코드 확인)
   const handleOAuthCallback = async () => {
-    // Google OAuth 콜백 경로에서는 실행하지 않음
-    if (location.pathname === '/auth/google/callback') {
+    // OAuth 콜백 경로에서는 실행하지 않음
+    if (isOAuthCallbackPath(location.pathname)) {
       return;
     }
     
     // 이미 처리 중인지 확인 (중복 실행 방지 - localStorage + 전역 변수)
     const isOAuthProcessing = localStorage.getItem('oauth_processing');
-    if (isOAuthProcessing === 'true' || globalOAuthProcessing) {
+    if (isOAuthProcessing === 'true' || globalOAuthProcessing.value) {
       return;
     }
     
-    // Google OAuth 코드 확인
+    // OAuth 코드 확인 (Google, Kakao, Naver)
     const googleAuthCode = localStorage.getItem('google_auth_code');
+    const kakaoAuthCode = localStorage.getItem('kakao_auth_code');
+    const naverAuthCode = localStorage.getItem('naver_auth_code');
     
     // OAuth 진행 상태 정리
-    const oauthInProgress = localStorage.getItem('oauth_in_progress');
-    if (oauthInProgress === 'true') {
-      // OAuth 진행 상태 정리
-      localStorage.removeItem('oauth_in_progress');
-      localStorage.removeItem('oauth_provider');
-    }
+    cleanupOAuthProgress();
     
-    const codeVerifier = localStorage.getItem('google_oauth_code_verifier');
+    // OAuth 제공자별 처리
+    const oauthProviders = [
+      { provider: 'google' as const, authCode: googleAuthCode },
+      { provider: 'kakao' as const, authCode: kakaoAuthCode },
+      { provider: 'naver' as const, authCode: naverAuthCode }
+    ];
     
-    if (googleAuthCode && codeVerifier) {
-      // 처리 중 플래그 설정 (이중 보안)
-      localStorage.setItem('oauth_processing', 'true');
-      globalOAuthProcessing = true;
-      // 스플래시는 숨기되, 전역 로딩 화면은 사용하지 않음
-      setShowSplash(false);
-      
-      try {
-        // Google AuthManager 설정 및 로그인 처리
-        const { resetAuthManager } = await import('./auth/authManager');
-        const authManager = resetAuthManager('google');
-        
-        // redirectUri는 백엔드에서 환경변수 사용하도록 전송하지 않음
-        const result = await authManager.login({
-          provider: 'google',
-          authCode: googleAuthCode,
-          codeVerifier: codeVerifier
-          // redirectUri 제거 - 백엔드에서 환경변수 사용
-        });
-        
-        if (result.success) {
-          setIsAuthenticated(true);
-          // 로그인 성공 시 토큰 갱신 서비스 시작
-          initializeTokenRefreshService();
-          setShowSplash(false);
-          navigate('/dashboard');
-        } else {
-          console.error('Google 로그인 실패:', result.message);
-        }
-      } catch (error) {
-        console.error('OAuth 콜백 처리 중 오류:', error);
-      } finally {
-        // 사용한 인증 코드 및 PKCE 파라미터 삭제
-        localStorage.removeItem('google_auth_code');
-        localStorage.removeItem('google_oauth_code_verifier');
-        localStorage.removeItem('google_oauth_state');
-        localStorage.removeItem('oauth_processing');
-        globalOAuthProcessing = false;
-        // 전역 로딩 해제 불필요 (전역 로딩을 사용하지 않음)
+    for (const { provider, authCode } of oauthProviders) {
+      if (authCode) {
+        await processOAuthProvider(
+          provider,
+          authCode,
+          setShowSplash,
+          setIsAuthenticated,
+          initializeTokenRefreshService,
+          navigate,
+          globalOAuthProcessing
+        );
+        break; // 한 번에 하나의 제공자만 처리
       }
-    } else if (googleAuthCode && !codeVerifier) {
-      console.warn('authCode는 있지만 codeVerifier가 없습니다. PKCE 플로우가 제대로 작동하지 않았을 수 있습니다.');
-      localStorage.removeItem('google_auth_code');
     }
   };
 
@@ -158,6 +201,13 @@ function AppContent() {
     setIsAuthenticated(true);
     // 로그인 성공 시 토큰 갱신 서비스 시작
     initializeTokenRefreshService();
+    
+    // 사용자 정보 가져오기 시도 (이메일 로그인의 경우)
+    const currentProvider = getCurrentProviderType();
+    if (currentProvider === 'email') {
+      await fetchUserInfoAfterEmailLogin();
+    }
+    
     navigate('/dashboard');
     
     // 잠시 후 토큰 상태를 확인하여 UI 업데이트
@@ -171,25 +221,9 @@ function AppContent() {
       const authManager = getAuthManager();
       const currentProvider = getCurrentProviderType();
       
-      if (currentProvider === 'google') {
-        // 구글 로그인: 프론트엔드에서만 로그아웃 처리
-        const tokenStore = authManager['tokenStore'];
-        if (tokenStore && typeof tokenStore.removeToken === 'function') {
-          await tokenStore.removeToken();
-        }
-        
-        // 쿠키에서 토큰들 삭제
-        document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        
-        // OAuth 관련 localStorage 정리
-        localStorage.removeItem('google_auth_code');
-        localStorage.removeItem('google_oauth_code_verifier');
-        localStorage.removeItem('google_oauth_state');
-        localStorage.removeItem('oauth_processing');
-        localStorage.removeItem('oauth_in_progress');
-        localStorage.removeItem('oauth_provider');
-        localStorage.removeItem('current_provider_type');
+      if (isOAuthProvider(currentProvider)) {
+        // OAuth 로그인: 프론트엔드에서만 로그아웃 처리
+        await handleOAuthLogout(currentProvider, authManager);
         
         // 인증 상태 업데이트 및 스플래시 화면으로 돌아가기
         setIsAuthenticated(false);
@@ -199,13 +233,9 @@ function AppContent() {
         
       } else {
         // 이메일 로그인: 백엔드 API 호출
-        const result = await authManager.logout({ 
-          provider: currentProvider
-        });
+        const result = await handleEmailLogout(authManager, currentProvider);
         
         if (result.success) {
-          // 이메일 로그아웃 시에도 provider type 정리
-          localStorage.removeItem('current_provider_type');
           setIsAuthenticated(false);
           setShowSplash(true);
           alert('✅ 로그아웃되었습니다.');
@@ -218,8 +248,10 @@ function AppContent() {
       
     } catch (error) {
       console.error('❌ 로그아웃 중 오류:', error);
-      if (getCurrentProviderType() === 'google') {
-        // 구글 로그인의 경우 오류가 있어도 스플래시 화면으로 돌아가기
+      const currentProvider = getCurrentProviderType();
+      
+      if (isOAuthProvider(currentProvider)) {
+        // OAuth 로그인의 경우 오류가 있어도 스플래시 화면으로 돌아가기
         setIsAuthenticated(false);
         setShowSplash(true);
         navigate('/');
@@ -287,8 +319,12 @@ function AppContent() {
           <Route path="/start" element={<LoginSelector onBack={handleBackToSplash} />} />
           <Route path="/login/email" element={<EmailLogin onLoginSuccess={handleLoginSuccess} />} />
           <Route path="/login/google" element={<GoogleLogin />} />
+          <Route path="/login/kakao" element={<KakaoLogin />} />
+          <Route path="/login/naver" element={<NaverLogin />} />
           <Route path="/dashboard" element={<Dashboard onLogout={handleLogout} />} />
           <Route path="/auth/google/callback" element={<GoogleCallback />} />
+          <Route path="/auth/kakao/callback" element={<KakaoCallback />} />
+          <Route path="/auth/naver/callback" element={<NaverCallback />} />
         </Routes>
       </main>
     </div>

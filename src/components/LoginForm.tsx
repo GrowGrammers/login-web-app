@@ -1,5 +1,5 @@
 import EmailLogin from './EmailLogin';
-import GoogleLogin from './GoogleLogin';
+import GoogleLogin from './oauth/GoogleLogin';
 
 interface LoginFormProps {
   onLoginSuccess: () => void;
