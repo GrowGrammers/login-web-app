@@ -5,7 +5,7 @@ type AuthProviderType = 'email' | 'google' | 'kakao' | 'naver' | 'fake';
 import { WebTokenStore } from './WebTokenStore';
 import { RealHttpClient } from './RealHttpClient';
 import { getApiConfig, getGoogleConfig, getKakaoConfig, getNaverConfig, checkEnvironmentVariables } from '../config/auth.config';
-import { isJWTExpired } from './jwtUtils';
+import { isJWTExpired } from '../utils/jwtUtils';
 
 // 전역 AuthManager 인스턴스
 let authManagerInstance: AuthManager | null = null;

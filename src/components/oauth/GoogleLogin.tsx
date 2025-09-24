@@ -1,34 +1,32 @@
 import { useState, useEffect } from 'react';
-import { resetAuthManager } from '../auth/authManager';
-import { generateRandomString, generateCodeVerifier, generateCodeChallenge } from '../utils/pkceUtils';
+import { resetAuthManager } from '../../auth/authManager';
+import { generateRandomString, generateCodeVerifier, generateCodeChallenge } from '../../utils/pkceUtils';
 
-const NaverLogin = () => {
+const GoogleLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
 
   // AuthManager 초기화
   useEffect(() => {
-    resetAuthManager('naver');
+    resetAuthManager('google');
     setMessage('');
   }, []);
 
-  const handleNaverLogin = async () => {
+  const handleGoogleLogin = async () => {
     try {
       setIsLoading(true);
-      setMessage('🔄 Naver OAuth 페이지로 이동합니다...');
+      setMessage('🔄 Google OAuth 페이지로 이동합니다...');
       
-      // 환경변수에서 Naver OAuth 설정 가져오기
-      const clientId = import.meta.env.VITE_NAVER_CLIENT_ID; 
-      const redirectUri = `${window.location.origin}/auth/naver/callback`;
+      // 환경변수에서 Google OAuth 설정 가져오기
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID; 
+      const redirectUri = `${window.location.origin}/auth/google/callback`;
       
       // 환경변수 redirect URI가 있으면 사용, 없으면 기본값 사용
-      const finalRedirectUri = import.meta.env.VITE_NAVER_REDIRECT_URI || redirectUri;
+      const finalRedirectUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI || redirectUri;
       
       // 환경변수 검증
       if (!clientId) {
-        setMessage('❌ Naver Client ID가 설정되지 않았습니다. .env 파일에 VITE_NAVER_CLIENT_ID를 설정해주세요.');
-        setIsLoading(false);
-        return;
+        throw new Error('Google Client ID가 설정되지 않았습니다. .env 파일을 확인해주세요.');
       }
       
       // PKCE 파라미터 생성
@@ -37,30 +35,32 @@ const NaverLogin = () => {
       const state = generateRandomString(32);
       
       // PKCE 파라미터를 localStorage에 저장
-      localStorage.setItem('naver_oauth_code_verifier', codeVerifier);
-      localStorage.setItem('naver_oauth_state', state);
+      localStorage.setItem('google_oauth_code_verifier', codeVerifier);
+      localStorage.setItem('google_oauth_state', state);
       
-      // Naver OAuth URL 생성 (PKCE 포함)
-      const naverAuthUrl = `https://nid.naver.com/oauth2.0/authorize?` +
+      // Google OAuth URL 생성 (PKCE 포함)
+      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
         `client_id=${encodeURIComponent(clientId)}&` +
         `redirect_uri=${encodeURIComponent(finalRedirectUri)}&` +
+        `scope=${encodeURIComponent('email profile openid')}&` +
         `response_type=code&` +
-        `scope=${encodeURIComponent('name email')}&` +
+        `access_type=offline&` +
+        `prompt=consent&` +
         `code_challenge=${encodeURIComponent(codeChallenge)}&` +
         `code_challenge_method=S256&` +
         `state=${encodeURIComponent(state)}`;
       
       // 현재 상태를 localStorage에 저장
       localStorage.setItem('oauth_in_progress', 'true');
-      localStorage.setItem('oauth_provider', 'naver');
+      localStorage.setItem('oauth_provider', 'google');
       
-      // 현재 창에서 Naver OAuth 페이지로 이동
-      window.location.href = naverAuthUrl;
+      // 현재 창에서 Google OAuth 페이지로 이동
+      window.location.href = googleAuthUrl;
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
       setMessage(`❌ ${errorMessage}`);
-      console.error('❌ Naver 로그인 중 오류:', error);
+      console.error('❌ Google 로그인 중 오류:', error);
       setIsLoading(false);
     }
   };
@@ -71,8 +71,8 @@ const NaverLogin = () => {
 
       {/* 헤더 */}
       <div className="px-4 py-16 pb-4 text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Naver로 계속하기</h2>
-        <p className="text-sm text-gray-600">Naver 계정으로 빠르게 로그인하세요</p>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Google로 계속하기</h2>
+        <p className="text-sm text-gray-600">Google 계정으로 빠르게 로그인하세요</p>
       </div>
 
       <div className="flex-1 px-8 pb-4 flex flex-col w-full">
@@ -90,11 +90,11 @@ const NaverLogin = () => {
             )}
 
             <button
-              onClick={handleNaverLogin}
+              onClick={handleGoogleLogin}
               disabled={isLoading}
-              className="w-full p-4 bg-green-600 text-white rounded-xl text-base font-semibold hover:bg-green-700 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full p-4 bg-blue-500 text-white rounded-xl text-base font-semibold hover:bg-blue-600 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              {isLoading ? 'Naver 인증 중...' : 'Naver로 계속하기'}
+              {isLoading ? 'Google 인증 중...' : 'Google로 계속하기'}
             </button>
           </div>
         </div>
@@ -103,4 +103,4 @@ const NaverLogin = () => {
   );
 };
 
-export default NaverLogin;
+export default GoogleLogin;

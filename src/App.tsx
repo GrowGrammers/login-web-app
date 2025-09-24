@@ -1,20 +1,22 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { checkAuthStatus, getAuthManager, getCurrentProviderType } from './auth/authManager';
+import { handleOAuthLogout, handleEmailLogout, isOAuthProvider } from './utils/logoutUtils';
+import { processOAuthProvider, isOAuthCallbackPath, cleanupOAuthProgress } from './utils/oauthCallbackUtils';
 import { initializeTokenRefreshService } from './auth/TokenRefreshService';
 import LoginSelector from './components/LoginSelector';
 import EmailLogin from './components/EmailLogin';
-import GoogleLogin from './components/GoogleLogin';
-import KakaoLogin from './components/KakaoLogin';
-import NaverLogin from './components/NaverLogin';
+import GoogleLogin from './components/oauth/GoogleLogin';
+import KakaoLogin from './components/oauth/KakaoLogin';
+import NaverLogin from './components/oauth/NaverLogin';
 import Dashboard from './components/Dashboard';
-import GoogleCallback from './components/GoogleCallback';
-import KakaoCallback from './components/KakaoCallback';
-import NaverCallback from './components/NaverCallback';
+import GoogleCallback from './components/oauth/GoogleCallback';
+import KakaoCallback from './components/oauth/KakaoCallback';
+import NaverCallback from './components/oauth/NaverCallback';
 import './App.css';
 
 // 전역 OAuth 처리 상태 (React Strict Mode 대응)
-let globalOAuthProcessing = false;
+const globalOAuthProcessing = { value: false };
 
 // Main App 컴포넌트 (Router 내부)
 function AppContent() {
@@ -52,13 +54,13 @@ function AppContent() {
   // OAuth 콜백 처리 (localStorage에서 인증 코드 확인)
   const handleOAuthCallback = async () => {
     // OAuth 콜백 경로에서는 실행하지 않음
-    if (location.pathname === '/auth/google/callback' || location.pathname === '/auth/kakao/callback' || location.pathname === '/auth/naver/callback') {
+    if (isOAuthCallbackPath(location.pathname)) {
       return;
     }
     
     // 이미 처리 중인지 확인 (중복 실행 방지 - localStorage + 전역 변수)
     const isOAuthProcessing = localStorage.getItem('oauth_processing');
-    if (isOAuthProcessing === 'true' || globalOAuthProcessing) {
+    if (isOAuthProcessing === 'true' || globalOAuthProcessing.value) {
       return;
     }
     
@@ -68,145 +70,27 @@ function AppContent() {
     const naverAuthCode = localStorage.getItem('naver_auth_code');
     
     // OAuth 진행 상태 정리
-    const oauthInProgress = localStorage.getItem('oauth_in_progress');
-    if (oauthInProgress === 'true') {
-      // OAuth 진행 상태 정리
-      localStorage.removeItem('oauth_in_progress');
-      localStorage.removeItem('oauth_provider');
-    }
+    cleanupOAuthProgress();
     
-    // Google OAuth 처리
-    if (googleAuthCode) {
-      const codeVerifier = localStorage.getItem('google_oauth_code_verifier');
-      
-      if (codeVerifier) {
-        // 처리 중 플래그 설정 (이중 보안)
-        localStorage.setItem('oauth_processing', 'true');
-        globalOAuthProcessing = true;
-        setShowSplash(false);
-        
-        try {
-          // Google AuthManager 설정 및 로그인 처리
-          const { resetAuthManager } = await import('./auth/authManager');
-          const authManager = resetAuthManager('google');
-          
-          const result = await authManager.login({
-            provider: 'google',
-            authCode: googleAuthCode,
-            codeVerifier: codeVerifier
-          });
-          
-          if (result.success) {
-            setIsAuthenticated(true);
-            initializeTokenRefreshService();
-            setShowSplash(false);
-            navigate('/dashboard');
-          } else {
-            console.error('Google 로그인 실패:', result.message);
-          }
-        } catch (error) {
-          console.error('Google OAuth 콜백 처리 중 오류:', error);
-        } finally {
-          // 사용한 인증 코드 및 PKCE 파라미터 삭제
-          localStorage.removeItem('google_auth_code');
-          localStorage.removeItem('google_oauth_code_verifier');
-          localStorage.removeItem('google_oauth_state');
-          localStorage.removeItem('oauth_processing');
-          globalOAuthProcessing = false;
-        }
-      } else {
-        console.warn('Google authCode는 있지만 codeVerifier가 없습니다.');
-        localStorage.removeItem('google_auth_code');
-      }
-    }
+    // OAuth 제공자별 처리
+    const oauthProviders = [
+      { provider: 'google' as const, authCode: googleAuthCode },
+      { provider: 'kakao' as const, authCode: kakaoAuthCode },
+      { provider: 'naver' as const, authCode: naverAuthCode }
+    ];
     
-    // Kakao OAuth 처리
-    if (kakaoAuthCode) {
-      const codeVerifier = localStorage.getItem('kakao_oauth_code_verifier');
-      
-      if (codeVerifier) {
-        // 처리 중 플래그 설정 (이중 보안)
-        localStorage.setItem('oauth_processing', 'true');
-        globalOAuthProcessing = true;
-        setShowSplash(false);
-        
-        try {
-          // Kakao AuthManager 설정 및 로그인 처리
-          const { resetAuthManager } = await import('./auth/authManager');
-          const authManager = resetAuthManager('kakao');
-          
-          const result = await authManager.login({
-            provider: 'kakao',
-            authCode: kakaoAuthCode,
-            codeVerifier: codeVerifier
-          });
-          
-          if (result.success) {
-            setIsAuthenticated(true);
-            initializeTokenRefreshService();
-            setShowSplash(false);
-            navigate('/dashboard');
-          } else {
-            console.error('Kakao 로그인 실패:', result.message);
-          }
-        } catch (error) {
-          console.error('Kakao OAuth 콜백 처리 중 오류:', error);
-        } finally {
-          // 사용한 인증 코드 및 PKCE 파라미터 삭제
-          localStorage.removeItem('kakao_auth_code');
-          localStorage.removeItem('kakao_oauth_code_verifier');
-          localStorage.removeItem('kakao_oauth_state');
-          localStorage.removeItem('oauth_processing');
-          globalOAuthProcessing = false;
-        }
-      } else {
-        console.warn('Kakao authCode는 있지만 codeVerifier가 없습니다.');
-        localStorage.removeItem('kakao_auth_code');
-      }
-    }
-    
-    // Naver OAuth 처리
-    if (naverAuthCode) {
-      const codeVerifier = localStorage.getItem('naver_oauth_code_verifier');
-      
-      if (codeVerifier) {
-        // 처리 중 플래그 설정 (이중 보안)
-        localStorage.setItem('oauth_processing', 'true');
-        globalOAuthProcessing = true;
-        setShowSplash(false);
-        
-        try {
-          // Naver AuthManager 설정 및 로그인 처리
-          const { resetAuthManager } = await import('./auth/authManager');
-          const authManager = resetAuthManager('naver');
-          
-          const result = await authManager.login({
-            provider: 'naver',
-            authCode: naverAuthCode,
-            codeVerifier: codeVerifier
-          });
-          
-          if (result.success) {
-            setIsAuthenticated(true);
-            initializeTokenRefreshService();
-            setShowSplash(false);
-            navigate('/dashboard');
-          } else {
-            console.error('Naver 로그인 실패:', result.message);
-          }
-        } catch (error) {
-          console.error('Naver OAuth 콜백 처리 중 오류:', error);
-        } finally {
-          // 사용한 인증 코드 및 PKCE 파라미터 삭제
-          localStorage.removeItem('naver_auth_code');
-          localStorage.removeItem('naver_oauth_code_verifier');
-          localStorage.removeItem('naver_oauth_state');
-          localStorage.removeItem('oauth_processing');
-          globalOAuthProcessing = false;
-        }
-      } else {
-        console.warn('Naver authCode는 있지만 codeVerifier가 없습니다.');
-        localStorage.removeItem('naver_auth_code');
+    for (const { provider, authCode } of oauthProviders) {
+      if (authCode) {
+        await processOAuthProvider(
+          provider,
+          authCode,
+          setShowSplash,
+          setIsAuthenticated,
+          initializeTokenRefreshService,
+          navigate,
+          globalOAuthProcessing
+        );
+        break; // 한 번에 하나의 제공자만 처리
       }
     }
   };
@@ -265,77 +149,9 @@ function AppContent() {
       const authManager = getAuthManager();
       const currentProvider = getCurrentProviderType();
       
-      if (currentProvider === 'google') {
-        // 구글 로그인: 프론트엔드에서만 로그아웃 처리
-        const tokenStore = authManager['tokenStore'];
-        if (tokenStore && typeof tokenStore.removeToken === 'function') {
-          await tokenStore.removeToken();
-        }
-        
-        // 쿠키에서 토큰들 삭제
-        document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        
-        // OAuth 관련 localStorage 정리
-        localStorage.removeItem('google_auth_code');
-        localStorage.removeItem('google_oauth_code_verifier');
-        localStorage.removeItem('google_oauth_state');
-        localStorage.removeItem('oauth_processing');
-        localStorage.removeItem('oauth_in_progress');
-        localStorage.removeItem('oauth_provider');
-        localStorage.removeItem('current_provider_type');
-        
-        // 인증 상태 업데이트 및 스플래시 화면으로 돌아가기
-        setIsAuthenticated(false);
-        setShowSplash(true);
-        alert('✅ 로그아웃되었습니다.');
-        navigate('/');
-        
-      } else if (currentProvider === 'kakao') {
-        // 카카오 로그인: 프론트엔드에서만 로그아웃 처리 (구글과 동일)
-        const tokenStore = authManager['tokenStore'];
-        if (tokenStore && typeof tokenStore.removeToken === 'function') {
-          await tokenStore.removeToken();
-        }
-        
-        // 쿠키에서 토큰들 삭제
-        document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        
-        // OAuth 관련 localStorage 정리
-        localStorage.removeItem('kakao_auth_code');
-        localStorage.removeItem('kakao_oauth_code_verifier');
-        localStorage.removeItem('kakao_oauth_state');
-        localStorage.removeItem('oauth_processing');
-        localStorage.removeItem('oauth_in_progress');
-        localStorage.removeItem('oauth_provider');
-        localStorage.removeItem('current_provider_type');
-        
-        // 인증 상태 업데이트 및 스플래시 화면으로 돌아가기
-        setIsAuthenticated(false);
-        setShowSplash(true);
-        alert('✅ 로그아웃되었습니다.');
-        navigate('/');
-        
-      } else if (currentProvider === 'naver') {
-        // 네이버 로그인: 프론트엔드에서만 로그아웃 처리 (구글/카카오와 동일)
-        const tokenStore = authManager['tokenStore'];
-        if (tokenStore && typeof tokenStore.removeToken === 'function') {
-          await tokenStore.removeToken();
-        }
-        
-        // 쿠키에서 토큰들 삭제
-        document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        
-        // OAuth 관련 localStorage 정리
-        localStorage.removeItem('naver_auth_code');
-        localStorage.removeItem('naver_oauth_code_verifier');
-        localStorage.removeItem('naver_oauth_state');
-        localStorage.removeItem('oauth_processing');
-        localStorage.removeItem('oauth_in_progress');
-        localStorage.removeItem('oauth_provider');
-        localStorage.removeItem('current_provider_type');
+      if (isOAuthProvider(currentProvider)) {
+        // OAuth 로그인: 프론트엔드에서만 로그아웃 처리
+        await handleOAuthLogout(currentProvider, authManager);
         
         // 인증 상태 업데이트 및 스플래시 화면으로 돌아가기
         setIsAuthenticated(false);
@@ -345,13 +161,9 @@ function AppContent() {
         
       } else {
         // 이메일 로그인: 백엔드 API 호출
-        const result = await authManager.logout({ 
-          provider: currentProvider
-        });
+        const result = await handleEmailLogout(authManager, currentProvider);
         
         if (result.success) {
-          // 이메일 로그아웃 시에도 provider type 정리
-          localStorage.removeItem('current_provider_type');
           setIsAuthenticated(false);
           setShowSplash(true);
           alert('✅ 로그아웃되었습니다.');
@@ -364,8 +176,10 @@ function AppContent() {
       
     } catch (error) {
       console.error('❌ 로그아웃 중 오류:', error);
-      if (getCurrentProviderType() === 'google' || getCurrentProviderType() === 'kakao' || getCurrentProviderType() === 'naver') {
-        // 구글/카카오/네이버 로그인의 경우 오류가 있어도 스플래시 화면으로 돌아가기
+      const currentProvider = getCurrentProviderType();
+      
+      if (isOAuthProvider(currentProvider)) {
+        // OAuth 로그인의 경우 오류가 있어도 스플래시 화면으로 돌아가기
         setIsAuthenticated(false);
         setShowSplash(true);
         navigate('/');

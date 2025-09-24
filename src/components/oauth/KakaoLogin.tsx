@@ -1,32 +1,34 @@
 import { useState, useEffect } from 'react';
-import { resetAuthManager } from '../auth/authManager';
-import { generateRandomString, generateCodeVerifier, generateCodeChallenge } from '../utils/pkceUtils';
+import { resetAuthManager } from '../../auth/authManager';
+import { generateRandomString, generateCodeVerifier, generateCodeChallenge } from '../../utils/pkceUtils';
 
-const GoogleLogin = () => {
+const KakaoLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
 
   // AuthManager 초기화
   useEffect(() => {
-    resetAuthManager('google');
+    resetAuthManager('kakao');
     setMessage('');
   }, []);
 
-  const handleGoogleLogin = async () => {
+  const handleKakaoLogin = async () => {
     try {
       setIsLoading(true);
-      setMessage('🔄 Google OAuth 페이지로 이동합니다...');
+      setMessage('🔄 Kakao OAuth 페이지로 이동합니다...');
       
-      // 환경변수에서 Google OAuth 설정 가져오기
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID; 
-      const redirectUri = `${window.location.origin}/auth/google/callback`;
+      // 환경변수에서 Kakao OAuth 설정 가져오기
+      const clientId = import.meta.env.VITE_KAKAO_CLIENT_ID; 
+      const redirectUri = `${window.location.origin}/auth/kakao/callback`;
       
       // 환경변수 redirect URI가 있으면 사용, 없으면 기본값 사용
-      const finalRedirectUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI || redirectUri;
+      const finalRedirectUri = import.meta.env.VITE_KAKAO_REDIRECT_URI || redirectUri;
       
       // 환경변수 검증
       if (!clientId) {
-        throw new Error('Google Client ID가 설정되지 않았습니다. .env 파일을 확인해주세요.');
+        setMessage('❌ Kakao Client ID가 설정되지 않았습니다. .env 파일에 VITE_KAKAO_CLIENT_ID를 설정해주세요.');
+        setIsLoading(false);
+        return;
       }
       
       // PKCE 파라미터 생성
@@ -35,32 +37,30 @@ const GoogleLogin = () => {
       const state = generateRandomString(32);
       
       // PKCE 파라미터를 localStorage에 저장
-      localStorage.setItem('google_oauth_code_verifier', codeVerifier);
-      localStorage.setItem('google_oauth_state', state);
+      localStorage.setItem('kakao_oauth_code_verifier', codeVerifier);
+      localStorage.setItem('kakao_oauth_state', state);
       
-      // Google OAuth URL 생성 (PKCE 포함)
-      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      // Kakao OAuth URL 생성 (PKCE 포함)
+      const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?` +
         `client_id=${encodeURIComponent(clientId)}&` +
         `redirect_uri=${encodeURIComponent(finalRedirectUri)}&` +
-        `scope=${encodeURIComponent('email profile openid')}&` +
         `response_type=code&` +
-        `access_type=offline&` +
-        `prompt=consent&` +
+        `scope=${encodeURIComponent('profile_nickname account_email')}&` +
         `code_challenge=${encodeURIComponent(codeChallenge)}&` +
         `code_challenge_method=S256&` +
         `state=${encodeURIComponent(state)}`;
       
       // 현재 상태를 localStorage에 저장
       localStorage.setItem('oauth_in_progress', 'true');
-      localStorage.setItem('oauth_provider', 'google');
+      localStorage.setItem('oauth_provider', 'kakao');
       
-      // 현재 창에서 Google OAuth 페이지로 이동
-      window.location.href = googleAuthUrl;
+      // 현재 창에서 Kakao OAuth 페이지로 이동
+      window.location.href = kakaoAuthUrl;
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
       setMessage(`❌ ${errorMessage}`);
-      console.error('❌ Google 로그인 중 오류:', error);
+      console.error('❌ Kakao 로그인 중 오류:', error);
       setIsLoading(false);
     }
   };
@@ -71,8 +71,8 @@ const GoogleLogin = () => {
 
       {/* 헤더 */}
       <div className="px-4 py-16 pb-4 text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Google로 계속하기</h2>
-        <p className="text-sm text-gray-600">Google 계정으로 빠르게 로그인하세요</p>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Kakao로 계속하기</h2>
+        <p className="text-sm text-gray-600">Kakao 계정으로 빠르게 로그인하세요</p>
       </div>
 
       <div className="flex-1 px-8 pb-4 flex flex-col w-full">
@@ -90,11 +90,11 @@ const GoogleLogin = () => {
             )}
 
             <button
-              onClick={handleGoogleLogin}
+              onClick={handleKakaoLogin}
               disabled={isLoading}
-              className="w-full p-4 bg-blue-500 text-white rounded-xl text-base font-semibold hover:bg-blue-600 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full p-4 bg-yellow-400 text-black rounded-xl text-base font-semibold hover:bg-yellow-500 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              {isLoading ? 'Google 인증 중...' : 'Google로 계속하기'}
+              {isLoading ? 'Kakao 인증 중...' : 'Kakao로 계속하기'}
             </button>
           </div>
         </div>
@@ -103,4 +103,4 @@ const GoogleLogin = () => {
   );
 };
 
-export default GoogleLogin;
+export default KakaoLogin;

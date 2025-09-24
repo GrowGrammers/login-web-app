@@ -1,6 +1,6 @@
 import type { HttpClient, HttpRequestConfig, HttpResponse } from 'growgrammers-auth-core';
 import { getTokenRefreshService } from './TokenRefreshService';
-import { getExpirationFromJWT } from './jwtUtils';
+import { getExpirationFromJWT } from '../utils/jwtUtils';
 
 // Helpers
 function isFormData(v: unknown): v is FormData {

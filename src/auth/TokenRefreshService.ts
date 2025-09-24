@@ -1,5 +1,5 @@
 import { getAuthManager, getCurrentProviderType } from './authManager';
-import { getExpirationFromJWT, getTimeUntilExpiryFromJWT } from './jwtUtils';
+import { getExpirationFromJWT, getTimeUntilExpiryFromJWT } from '../utils/jwtUtils';
 
 interface TokenRefreshConfig {
   refreshThresholdMinutes: number; // 만료 몇 분 전에 갱신할지

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getAuthManager, getCurrentProviderType } from '../auth/authManager';
 import { getTokenRefreshService } from '../auth/TokenRefreshService';
-import { isJWTExpired } from '../auth/jwtUtils';
+import { isJWTExpired } from '../utils/jwtUtils';
 
 // HttpOnly 쿠키는 JavaScript에서 접근할 수 없으므로 쿠키 읽기 함수는 사용하지 않음
 
