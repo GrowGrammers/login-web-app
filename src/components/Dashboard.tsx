@@ -66,7 +66,12 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
 
       // 사용자 정보 가져오기 (백엔드 미완성으로 인한 임시 처리)
       try {
+        // 토큰 정보 디버깅
+        console.log('🔍 현재 토큰 정보:', tokenResult);
+        
         const userResult = await authManager.getCurrentUserInfo();
+        
+        console.log('🔍 사용자 정보 조회 결과:', userResult);
         
         if (userResult.success && userResult.data) {
           setUserInfo(userResult.data);
@@ -76,8 +81,10 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
           // 더미 사용자 정보 설정
           setUserInfo({
             id: 'demo-user',
-            email: currentProvider === 'google' ? 'demo@gmail.com' : 'demo@example.com',
-            nickname: currentProvider === 'google' ? 'Google 데모 사용자' : '이메일 데모 사용자',
+            email: currentProvider === 'google' ? 'demo@gmail.com' : 
+                   currentProvider === 'kakao' ? 'demo@kakao.com' : 'demo@example.com',
+            nickname: currentProvider === 'google' ? 'Google 데모 사용자' : 
+                     currentProvider === 'kakao' ? 'Kakao 데모 사용자' : '이메일 데모 사용자',
             provider: getCurrentProviderType()
           });
         }
@@ -87,8 +94,10 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         // 더미 사용자 정보 설정
         setUserInfo({
           id: 'demo-user',
-          email: currentProvider === 'google' ? 'demo@gmail.com' : 'demo@example.com',
-          nickname: currentProvider === 'google' ? 'Google 데모 사용자' : '이메일 데모 사용자',
+          email: currentProvider === 'google' ? 'demo@gmail.com' : 
+                 currentProvider === 'kakao' ? 'demo@kakao.com' : 'demo@example.com',
+          nickname: currentProvider === 'google' ? 'Google 데모 사용자' : 
+                   currentProvider === 'kakao' ? 'Kakao 데모 사용자' : '이메일 데모 사용자',
           provider: getCurrentProviderType()
         });
       }

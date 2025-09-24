@@ -19,10 +19,24 @@ const API_CONFIGS = {
 
       // Google OAuth 엔드포인트
       googleLogin: '/api/v1/auth/google/login',
-      googleLogout: '/api/v1/auth/google/logout',
-      googleRefresh: '/api/v1/auth/members/refresh',
+      googleLogout: '/api/v1/auth/google/logout', //소셜 로그아웃 통일 (클라에서 토큰 삭제)
+      googleRefresh: '/api/v1/auth/members/refresh', //토큰 갱신 통일 (소셜+이메일)
       googleValidate: '/api/v1/auth/google/validate',
-      googleUserinfo: '/api/v1/auth/members/user-info'
+      googleUserinfo: '/api/v1/auth/members/user-info', //유저 정보 조회 통일 (소셜+이메일)
+
+      // Kakao OAuth 엔드포인트
+      kakaoLogin: '/api/v1/auth/kakao/login',
+      kakaoLogout: '/api/v1/auth/kakao/logout',
+      kakaoRefresh: '/api/v1/auth/members/refresh',
+      kakaoValidate: '/api/v1/auth/kakao/validate',
+      kakaoUserinfo: '/api/v1/auth/members/user-info',
+
+      // Naver OAuth 엔드포인트
+      naverLogin: '/api/v1/auth/naver/login',
+      naverLogout: '/api/v1/auth/naver/logout',
+      naverRefresh: '/api/v1/auth/members/refresh',
+      naverValidate: '/api/v1/auth/naver/validate',
+      naverUserinfo: '/api/v1/auth/members/user-info'
     }
   },
   production: {
@@ -45,7 +59,21 @@ const API_CONFIGS = {
       googleLogout: '/api/v1/auth/google/logout',
       googleRefresh: '/api/v1/auth/members/refresh',
       googleValidate: '/api/v1/auth/google/validate',
-      googleUserinfo: '/api/v1/auth/members/user-info'
+      googleUserinfo: '/api/v1/auth/members/user-info',
+
+      // Kakao OAuth 엔드포인트
+      kakaoLogin: '/api/v1/auth/kakao/login',
+      kakaoLogout: '/api/v1/auth/kakao/logout',
+      kakaoRefresh: '/api/v1/auth/members/refresh',
+      kakaoValidate: '/api/v1/auth/kakao/validate',
+      kakaoUserinfo: '/api/v1/auth/members/user-info',
+
+      // Naver OAuth 엔드포인트
+      naverLogin: '/api/v1/auth/naver/login',
+      naverLogout: '/api/v1/auth/naver/logout',
+      naverRefresh: '/api/v1/auth/members/refresh',
+      naverValidate: '/api/v1/auth/naver/validate',
+      naverUserinfo: '/api/v1/auth/members/user-info'
     }
   }
 } as const;
@@ -78,7 +106,9 @@ export function getApiConfig(): ApiConfig {
 export function checkEnvironmentVariables() {
   const requiredVars = [
     'VITE_API_BASE_URL',
-    'VITE_GOOGLE_CLIENT_ID'
+    'VITE_GOOGLE_CLIENT_ID',
+    'VITE_KAKAO_CLIENT_ID',
+    'VITE_NAVER_CLIENT_ID'
   ];
 
   const missingVars = requiredVars.filter((v) => !import.meta.env[v as keyof ImportMetaEnv]);
@@ -94,6 +124,28 @@ export function checkEnvironmentVariables() {
 export function getGoogleConfig() {
   return {
     googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+    timeout: API_CONFIGS[getCurrentEnvironment()].timeout,
+    retryCount: API_CONFIGS[getCurrentEnvironment()].retryCount
+  } as const;
+}
+
+/**
+ * Kakao 관련 설정 가져오기
+ */
+export function getKakaoConfig() {
+  return {
+    kakaoClientId: import.meta.env.VITE_KAKAO_CLIENT_ID,
+    timeout: API_CONFIGS[getCurrentEnvironment()].timeout,
+    retryCount: API_CONFIGS[getCurrentEnvironment()].retryCount
+  } as const;
+}
+
+/**
+ * Naver 관련 설정 가져오기
+ */
+export function getNaverConfig() {
+  return {
+    naverClientId: import.meta.env.VITE_NAVER_CLIENT_ID,
     timeout: API_CONFIGS[getCurrentEnvironment()].timeout,
     retryCount: API_CONFIGS[getCurrentEnvironment()].retryCount
   } as const;

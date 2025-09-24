@@ -1,12 +1,15 @@
 import { AuthManager } from 'growgrammers-auth-core';
+
+// 로컬 타입 정의 (auth-core의 타입이 제대로 인식되지 않는 경우를 대비)
+type AuthProviderType = 'email' | 'google' | 'kakao' | 'naver' | 'fake';
 import { WebTokenStore } from './WebTokenStore';
 import { RealHttpClient } from './RealHttpClient';
-import { getApiConfig, getGoogleConfig, checkEnvironmentVariables } from '../config/auth.config';
+import { getApiConfig, getGoogleConfig, getKakaoConfig, checkEnvironmentVariables } from '../config/auth.config';
 import { isJWTExpired } from './jwtUtils';
 
 // 전역 AuthManager 인스턴스
 let authManagerInstance: AuthManager | null = null;
-let currentProviderType: 'email' | 'google' = (localStorage.getItem('current_provider_type') as 'email' | 'google') || 'email';
+let currentProviderType: AuthProviderType = (localStorage.getItem('current_provider_type') as AuthProviderType) || 'email';
 
 /**
  * 이메일 인증용 AuthManager 생성
@@ -56,6 +59,32 @@ export function createGoogleAuthManager(): AuthManager {
 }
 
 /**
+ * Kakao OAuth용 AuthManager 생성
+ */
+export function createKakaoAuthManager(): AuthManager {
+  // 환경변수 확인
+  checkEnvironmentVariables();
+  
+  const apiConfig = getApiConfig();
+  const httpClient = new RealHttpClient();
+  const tokenStore = new WebTokenStore();
+  const kakaoConfig = getKakaoConfig();
+
+  return new AuthManager({
+    providerType: 'kakao',
+    platform: 'web', // 🌐 웹 플랫폼 명시
+    apiConfig,
+    httpClient,
+    tokenStore,
+    providerConfig: {
+      kakaoClientId: kakaoConfig.kakaoClientId || 'dummy_client_id', // 임시 값
+      timeout: kakaoConfig.timeout,
+      retryCount: kakaoConfig.retryCount
+    }
+  });
+}
+
+/**
  * 기본 AuthManager 인스턴스 가져오기 (이메일 인증)
  * 싱글톤 패턴으로 관리
  */
@@ -64,6 +93,8 @@ export function getAuthManager(): AuthManager {
     // 현재 provider 타입에 따라 적절한 AuthManager 생성
     if (currentProviderType === 'google') {
       authManagerInstance = createGoogleAuthManager();
+    } else if (currentProviderType === 'kakao') {
+      authManagerInstance = createKakaoAuthManager();
     } else {
       authManagerInstance = createEmailAuthManager();
     }
@@ -74,12 +105,14 @@ export function getAuthManager(): AuthManager {
 /**
  * AuthManager 인스턴스 재생성 (provider 변경시 사용)
  */
-export function resetAuthManager(type: 'email' | 'google' = 'email'): AuthManager {
+export function resetAuthManager(type: AuthProviderType = 'email'): AuthManager {
   currentProviderType = type; // 현재 provider type 업데이트
   localStorage.setItem('current_provider_type', type); // localStorage에 저장
   
   if (type === 'google') {
     authManagerInstance = createGoogleAuthManager();
+  } else if (type === 'kakao') {
+    authManagerInstance = createKakaoAuthManager();
   } else {
     authManagerInstance = createEmailAuthManager();
   }
@@ -90,7 +123,7 @@ export function resetAuthManager(type: 'email' | 'google' = 'email'): AuthManage
 /**
  * 현재 provider type 가져오기
  */
-export function getCurrentProviderType(): 'email' | 'google' {
+export function getCurrentProviderType(): AuthProviderType {
   return currentProviderType;
 }
 
