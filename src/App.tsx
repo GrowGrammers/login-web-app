@@ -51,8 +51,8 @@ function AppContent() {
 
   // OAuth 콜백 처리 (localStorage에서 인증 코드 확인)
   const handleOAuthCallback = async () => {
-    // Google OAuth 콜백 경로에서는 실행하지 않음
-    if (location.pathname === '/auth/google/callback') {
+    // OAuth 콜백 경로에서는 실행하지 않음
+    if (location.pathname === '/auth/google/callback' || location.pathname === '/auth/kakao/callback' || location.pathname === '/auth/naver/callback') {
       return;
     }
     
@@ -62,8 +62,10 @@ function AppContent() {
       return;
     }
     
-    // Google OAuth 코드 확인
+    // OAuth 코드 확인 (Google, Kakao, Naver)
     const googleAuthCode = localStorage.getItem('google_auth_code');
+    const kakaoAuthCode = localStorage.getItem('kakao_auth_code');
+    const naverAuthCode = localStorage.getItem('naver_auth_code');
     
     // OAuth 진행 상태 정리
     const oauthInProgress = localStorage.getItem('oauth_in_progress');
@@ -73,51 +75,139 @@ function AppContent() {
       localStorage.removeItem('oauth_provider');
     }
     
-    const codeVerifier = localStorage.getItem('google_oauth_code_verifier');
-    
-    if (googleAuthCode && codeVerifier) {
-      // 처리 중 플래그 설정 (이중 보안)
-      localStorage.setItem('oauth_processing', 'true');
-      globalOAuthProcessing = true;
-      // 스플래시는 숨기되, 전역 로딩 화면은 사용하지 않음
-      setShowSplash(false);
+    // Google OAuth 처리
+    if (googleAuthCode) {
+      const codeVerifier = localStorage.getItem('google_oauth_code_verifier');
       
-      try {
-        // Google AuthManager 설정 및 로그인 처리
-        const { resetAuthManager } = await import('./auth/authManager');
-        const authManager = resetAuthManager('google');
+      if (codeVerifier) {
+        // 처리 중 플래그 설정 (이중 보안)
+        localStorage.setItem('oauth_processing', 'true');
+        globalOAuthProcessing = true;
+        setShowSplash(false);
         
-        // redirectUri는 백엔드에서 환경변수 사용하도록 전송하지 않음
-        const result = await authManager.login({
-          provider: 'google',
-          authCode: googleAuthCode,
-          codeVerifier: codeVerifier
-          // redirectUri 제거 - 백엔드에서 환경변수 사용
-        });
-        
-        if (result.success) {
-          setIsAuthenticated(true);
-          // 로그인 성공 시 토큰 갱신 서비스 시작
-          initializeTokenRefreshService();
-          setShowSplash(false);
-          navigate('/dashboard');
-        } else {
-          console.error('Google 로그인 실패:', result.message);
+        try {
+          // Google AuthManager 설정 및 로그인 처리
+          const { resetAuthManager } = await import('./auth/authManager');
+          const authManager = resetAuthManager('google');
+          
+          const result = await authManager.login({
+            provider: 'google',
+            authCode: googleAuthCode,
+            codeVerifier: codeVerifier
+          });
+          
+          if (result.success) {
+            setIsAuthenticated(true);
+            initializeTokenRefreshService();
+            setShowSplash(false);
+            navigate('/dashboard');
+          } else {
+            console.error('Google 로그인 실패:', result.message);
+          }
+        } catch (error) {
+          console.error('Google OAuth 콜백 처리 중 오류:', error);
+        } finally {
+          // 사용한 인증 코드 및 PKCE 파라미터 삭제
+          localStorage.removeItem('google_auth_code');
+          localStorage.removeItem('google_oauth_code_verifier');
+          localStorage.removeItem('google_oauth_state');
+          localStorage.removeItem('oauth_processing');
+          globalOAuthProcessing = false;
         }
-      } catch (error) {
-        console.error('OAuth 콜백 처리 중 오류:', error);
-      } finally {
-        // 사용한 인증 코드 및 PKCE 파라미터 삭제
+      } else {
+        console.warn('Google authCode는 있지만 codeVerifier가 없습니다.');
         localStorage.removeItem('google_auth_code');
-        localStorage.removeItem('google_oauth_code_verifier');
-        localStorage.removeItem('google_oauth_state');
-        localStorage.removeItem('oauth_processing');
-        globalOAuthProcessing = false;
-        // 전역 로딩 해제 불필요 (전역 로딩을 사용하지 않음)
       }
-    } else if (googleAuthCode && !codeVerifier) {
-      console.warn('authCode는 있지만 codeVerifier가 없습니다. PKCE 플로우가 제대로 작동하지 않았을 수 있습니다.');
-      localStorage.removeItem('google_auth_code');
+    }
+    
+    // Kakao OAuth 처리
+    if (kakaoAuthCode) {
+      const codeVerifier = localStorage.getItem('kakao_oauth_code_verifier');
+      
+      if (codeVerifier) {
+        // 처리 중 플래그 설정 (이중 보안)
+        localStorage.setItem('oauth_processing', 'true');
+        globalOAuthProcessing = true;
+        setShowSplash(false);
+        
+        try {
+          // Kakao AuthManager 설정 및 로그인 처리
+          const { resetAuthManager } = await import('./auth/authManager');
+          const authManager = resetAuthManager('kakao');
+          
+          const result = await authManager.login({
+            provider: 'kakao',
+            authCode: kakaoAuthCode,
+            codeVerifier: codeVerifier
+          });
+          
+          if (result.success) {
+            setIsAuthenticated(true);
+            initializeTokenRefreshService();
+            setShowSplash(false);
+            navigate('/dashboard');
+          } else {
+            console.error('Kakao 로그인 실패:', result.message);
+          }
+        } catch (error) {
+          console.error('Kakao OAuth 콜백 처리 중 오류:', error);
+        } finally {
+          // 사용한 인증 코드 및 PKCE 파라미터 삭제
+          localStorage.removeItem('kakao_auth_code');
+          localStorage.removeItem('kakao_oauth_code_verifier');
+          localStorage.removeItem('kakao_oauth_state');
+          localStorage.removeItem('oauth_processing');
+          globalOAuthProcessing = false;
+        }
+      } else {
+        console.warn('Kakao authCode는 있지만 codeVerifier가 없습니다.');
+        localStorage.removeItem('kakao_auth_code');
+      }
+    }
+    
+    // Naver OAuth 처리
+    if (naverAuthCode) {
+      const codeVerifier = localStorage.getItem('naver_oauth_code_verifier');
+      
+      if (codeVerifier) {
+        // 처리 중 플래그 설정 (이중 보안)
+        localStorage.setItem('oauth_processing', 'true');
+        globalOAuthProcessing = true;
+        setShowSplash(false);
+        
+        try {
+          // Naver AuthManager 설정 및 로그인 처리
+          const { resetAuthManager } = await import('./auth/authManager');
+          const authManager = resetAuthManager('naver');
+          
+          const result = await authManager.login({
+            provider: 'naver',
+            authCode: naverAuthCode,
+            codeVerifier: codeVerifier
+          });
+          
+          if (result.success) {
+            setIsAuthenticated(true);
+            initializeTokenRefreshService();
+            setShowSplash(false);
+            navigate('/dashboard');
+          } else {
+            console.error('Naver 로그인 실패:', result.message);
+          }
+        } catch (error) {
+          console.error('Naver OAuth 콜백 처리 중 오류:', error);
+        } finally {
+          // 사용한 인증 코드 및 PKCE 파라미터 삭제
+          localStorage.removeItem('naver_auth_code');
+          localStorage.removeItem('naver_oauth_code_verifier');
+          localStorage.removeItem('naver_oauth_state');
+          localStorage.removeItem('oauth_processing');
+          globalOAuthProcessing = false;
+        }
+      } else {
+        console.warn('Naver authCode는 있지만 codeVerifier가 없습니다.');
+        localStorage.removeItem('naver_auth_code');
+      }
     }
   };
 

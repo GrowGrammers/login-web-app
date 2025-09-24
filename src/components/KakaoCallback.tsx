@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAuthManager, resetAuthManager } from '../auth/authManager';
 
 const KakaoCallback = () => {
   const navigate = useNavigate();
@@ -38,47 +37,17 @@ const KakaoCallback = () => {
           throw new Error('PKCE code verifier가 없습니다.');
         }
 
-        setMessage('🔄 Kakao 인증 코드를 서버로 전송 중...');
+        setMessage('✅ Kakao 인증 성공! 메인 페이지로 이동합니다...');
 
-        // AuthManager 초기화
-        resetAuthManager('kakao');
-        const authManager = getAuthManager();
-
-        // Kakao 로그인 요청
-        const loginResult = await authManager.login({
-          provider: 'kakao',
-          authCode: code,
-          codeVerifier: codeVerifier
-        });
-
-        if (loginResult.success) {
-          setMessage('✅ Kakao 로그인 성공!');
-          
-          // 로그인 상태 저장
-          localStorage.setItem('isLoggedIn', 'true');
-          localStorage.setItem('loginProvider', 'kakao');
-          
-          // OAuth 관련 임시 데이터 정리
-          localStorage.removeItem('kakao_oauth_code_verifier');
-          localStorage.removeItem('kakao_oauth_state');
-          localStorage.removeItem('oauth_in_progress');
-          localStorage.removeItem('oauth_provider');
-          
-          // 1초 후 대시보드로 이동
-          setTimeout(() => {
-            navigate('/dashboard');
-          }, 1000);
-        } else {
-          // 서버 오류인 경우 더 구체적인 메시지 표시
-          if (loginResult.message?.includes('서버 내부에 문제가 발생했습니다')) {
-            setMessage('❌ 서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
-          } else {
-            setMessage(`❌ ${loginResult.message || 'Kakao 로그인에 실패했습니다.'}`);
-          }
-          console.error('Kakao 로그인 실패:', loginResult);
-          setIsLoading(false);
-          return;
-        }
+        // 인증 코드를 localStorage에 저장 (App.tsx에서 처리)
+        localStorage.setItem('kakao_auth_code', code);
+        
+        // OAuth 관련 임시 데이터는 유지 (App.tsx에서 정리)
+        
+        // 1초 후 메인 페이지로 이동 (App.tsx에서 OAuth 콜백 처리)
+        setTimeout(() => {
+          navigate('/start');
+        }, 1000);
 
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';

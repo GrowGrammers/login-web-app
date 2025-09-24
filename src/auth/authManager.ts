@@ -4,7 +4,7 @@ import { AuthManager } from 'growgrammers-auth-core';
 type AuthProviderType = 'email' | 'google' | 'kakao' | 'naver' | 'fake';
 import { WebTokenStore } from './WebTokenStore';
 import { RealHttpClient } from './RealHttpClient';
-import { getApiConfig, getGoogleConfig, getKakaoConfig, checkEnvironmentVariables } from '../config/auth.config';
+import { getApiConfig, getGoogleConfig, getKakaoConfig, getNaverConfig, checkEnvironmentVariables } from '../config/auth.config';
 import { isJWTExpired } from './jwtUtils';
 
 // 전역 AuthManager 인스턴스
@@ -85,6 +85,32 @@ export function createKakaoAuthManager(): AuthManager {
 }
 
 /**
+ * Naver OAuth용 AuthManager 생성
+ */
+export function createNaverAuthManager(): AuthManager {
+  // 환경변수 확인
+  checkEnvironmentVariables();
+  
+  const apiConfig = getApiConfig();
+  const httpClient = new RealHttpClient();
+  const tokenStore = new WebTokenStore();
+  const naverConfig = getNaverConfig();
+
+  return new AuthManager({
+    providerType: 'naver',
+    platform: 'web', // 🌐 웹 플랫폼 명시
+    apiConfig,
+    httpClient,
+    tokenStore,
+    providerConfig: {
+      naverClientId: naverConfig.naverClientId || 'dummy_client_id', // 임시 값
+      timeout: naverConfig.timeout,
+      retryCount: naverConfig.retryCount
+    }
+  });
+}
+
+/**
  * 기본 AuthManager 인스턴스 가져오기 (이메일 인증)
  * 싱글톤 패턴으로 관리
  */
@@ -95,6 +121,8 @@ export function getAuthManager(): AuthManager {
       authManagerInstance = createGoogleAuthManager();
     } else if (currentProviderType === 'kakao') {
       authManagerInstance = createKakaoAuthManager();
+    } else if (currentProviderType === 'naver') {
+      authManagerInstance = createNaverAuthManager();
     } else {
       authManagerInstance = createEmailAuthManager();
     }
@@ -113,6 +141,8 @@ export function resetAuthManager(type: AuthProviderType = 'email'): AuthManager 
     authManagerInstance = createGoogleAuthManager();
   } else if (type === 'kakao') {
     authManagerInstance = createKakaoAuthManager();
+  } else if (type === 'naver') {
+    authManagerInstance = createNaverAuthManager();
   } else {
     authManagerInstance = createEmailAuthManager();
   }

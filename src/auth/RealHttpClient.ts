@@ -76,7 +76,6 @@ export class RealHttpClient implements HttpClient {
         finalHeaders['Content-Type'] = contentType;
       }
 
-      // HTTP 요청 로깅 삭제 (production에서 비활성화)
 
       const response = await fetch(url, {
         method,
@@ -96,8 +95,9 @@ export class RealHttpClient implements HttpClient {
 
       const responseHeaders = Object.fromEntries(response.headers.entries());
       
-      // OAuth 로그인 응답의 Authorization 헤더에서 토큰 추출 (Google, Kakao 공통)
-      if ((url.includes('/auth/google/login') || url.includes('/auth/kakao/login')) && response.ok && responseHeaders.authorization) {
+      
+      // OAuth 로그인 응답의 Authorization 헤더에서 토큰 추출 (Google, Kakao, Naver 공통)
+      if ((url.includes('/auth/google/login') || url.includes('/auth/kakao/login') || url.includes('/auth/naver/login')) && response.ok && responseHeaders.authorization) {
         // Authorization 헤더에서 Bearer 토큰 추출
         const authHeader = responseHeaders.authorization;
         if (authHeader.startsWith('Bearer ')) {
@@ -115,7 +115,8 @@ export class RealHttpClient implements HttpClient {
               expiredAt: expiredAt
             });
             
-            console.log('✅ OAuth 토큰 저장 완료:', { provider: url.includes('/google/') ? 'google' : 'kakao', expiredAt: new Date(expiredAt).toLocaleString() });
+            const provider = url.includes('/google/') ? 'google' : url.includes('/kakao/') ? 'kakao' : 'naver';
+            console.log('✅ OAuth 토큰 저장 완료:', { provider, expiredAt: new Date(expiredAt).toLocaleString() });
           } catch (tokenError) {
             console.error('❌ 수동 토큰 저장 실패:', tokenError);
           }
