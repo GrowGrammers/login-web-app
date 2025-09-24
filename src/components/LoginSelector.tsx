@@ -7,7 +7,7 @@ interface LoginSelectorProps {
 const LoginSelector = ({ onBack }: LoginSelectorProps) => {
   const navigate = useNavigate();
 
-  const handleMethodSelect = (method: 'email' | 'google' | 'kakao' | 'phone') => {
+  const handleMethodSelect = (method: 'email' | 'google' | 'kakao' | 'naver' | 'phone') => {
     if (method === 'phone') {
       alert('전화번호 인증 로그인은 추후 구현 예정입니다.');
       return;
@@ -19,6 +19,8 @@ const LoginSelector = ({ onBack }: LoginSelectorProps) => {
       navigate('/login/google');
     } else if (method === 'kakao') {
       navigate('/login/kakao');
+    } else if (method === 'naver') {
+      navigate('/login/naver');
     }
   };
 
@@ -69,9 +71,9 @@ const LoginSelector = ({ onBack }: LoginSelectorProps) => {
           
           <button 
             className="flex-1 h-16 border border-gray-200 rounded-2xl bg-white cursor-pointer transition-all duration-300 flex items-center justify-center shadow-sm hover:-translate-y-1 hover:shadow-md"
-            onClick={() => alert('Apple 로그인은 추후 구현 예정입니다.')}
+            onClick={() => handleMethodSelect('naver')}
           >
-            <div className="text-xl">🍎</div>
+            <div className="text-xl">🔵</div>
           </button>
           
           <button 

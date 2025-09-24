@@ -6,9 +6,11 @@ import LoginSelector from './components/LoginSelector';
 import EmailLogin from './components/EmailLogin';
 import GoogleLogin from './components/GoogleLogin';
 import KakaoLogin from './components/KakaoLogin';
+import NaverLogin from './components/NaverLogin';
 import Dashboard from './components/Dashboard';
 import GoogleCallback from './components/GoogleCallback';
 import KakaoCallback from './components/KakaoCallback';
+import NaverCallback from './components/NaverCallback';
 import './App.css';
 
 // 전역 OAuth 처리 상태 (React Strict Mode 대응)
@@ -225,6 +227,32 @@ function AppContent() {
         alert('✅ 로그아웃되었습니다.');
         navigate('/');
         
+      } else if (currentProvider === 'naver') {
+        // 네이버 로그인: 프론트엔드에서만 로그아웃 처리 (구글/카카오와 동일)
+        const tokenStore = authManager['tokenStore'];
+        if (tokenStore && typeof tokenStore.removeToken === 'function') {
+          await tokenStore.removeToken();
+        }
+        
+        // 쿠키에서 토큰들 삭제
+        document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        
+        // OAuth 관련 localStorage 정리
+        localStorage.removeItem('naver_auth_code');
+        localStorage.removeItem('naver_oauth_code_verifier');
+        localStorage.removeItem('naver_oauth_state');
+        localStorage.removeItem('oauth_processing');
+        localStorage.removeItem('oauth_in_progress');
+        localStorage.removeItem('oauth_provider');
+        localStorage.removeItem('current_provider_type');
+        
+        // 인증 상태 업데이트 및 스플래시 화면으로 돌아가기
+        setIsAuthenticated(false);
+        setShowSplash(true);
+        alert('✅ 로그아웃되었습니다.');
+        navigate('/');
+        
       } else {
         // 이메일 로그인: 백엔드 API 호출
         const result = await authManager.logout({ 
@@ -246,8 +274,8 @@ function AppContent() {
       
     } catch (error) {
       console.error('❌ 로그아웃 중 오류:', error);
-      if (getCurrentProviderType() === 'google' || getCurrentProviderType() === 'kakao') {
-        // 구글/카카오 로그인의 경우 오류가 있어도 스플래시 화면으로 돌아가기
+      if (getCurrentProviderType() === 'google' || getCurrentProviderType() === 'kakao' || getCurrentProviderType() === 'naver') {
+        // 구글/카카오/네이버 로그인의 경우 오류가 있어도 스플래시 화면으로 돌아가기
         setIsAuthenticated(false);
         setShowSplash(true);
         navigate('/');
@@ -316,9 +344,11 @@ function AppContent() {
           <Route path="/login/email" element={<EmailLogin onLoginSuccess={handleLoginSuccess} />} />
           <Route path="/login/google" element={<GoogleLogin />} />
           <Route path="/login/kakao" element={<KakaoLogin />} />
+          <Route path="/login/naver" element={<NaverLogin />} />
           <Route path="/dashboard" element={<Dashboard onLogout={handleLogout} />} />
           <Route path="/auth/google/callback" element={<GoogleCallback />} />
           <Route path="/auth/kakao/callback" element={<KakaoCallback />} />
+          <Route path="/auth/naver/callback" element={<NaverCallback />} />
         </Routes>
       </main>
     </div>
