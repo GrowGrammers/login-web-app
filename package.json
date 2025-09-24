@@ -10,8 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "auth-core": "file:../auth-core",
-    "growgrammers-auth-core": "file:../auth-core",
+    "growgrammers-auth-core": "^0.2.1",
     "jwt-decode": "^4.0.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
