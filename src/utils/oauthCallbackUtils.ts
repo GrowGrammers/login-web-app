@@ -2,6 +2,7 @@
  * OAuth 콜백 처리 관련 유틸리티 함수들
  */
 
+
 /**
  * OAuth 제공자별 콜백 처리
  * @param provider OAuth 제공자 ('google' | 'naver' | 'kakao')
@@ -44,6 +45,10 @@ export async function handleOAuthProviderCallback(
       setIsAuthenticated(true);
       initializeTokenRefreshService();
       setShowSplash(false);
+      
+      // RealHttpClient에서 이미 사용자 정보를 가져오므로 중복 호출 제거
+      // await fetchUserInfoAfterLogin(provider);
+      
       navigate('/dashboard');
     } else {
       console.error(`${provider} 로그인 실패:`, result.message);

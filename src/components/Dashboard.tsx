@@ -64,42 +64,74 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         setTokenInfo(null);
       }
 
-      // 사용자 정보 가져오기 (백엔드 미완성으로 인한 임시 처리)
+      // 사용자 정보 가져오기 (localStorage에서 먼저 확인)
       try {
-        // 토큰 정보 디버깅
-        console.log('🔍 현재 토큰 정보:', tokenResult);
-        
-        const userResult = await authManager.getCurrentUserInfo();
-        
-        console.log('🔍 사용자 정보 조회 결과:', userResult);
-        
-        if (userResult.success && userResult.data) {
-          setUserInfo(userResult.data);
+        // localStorage에서 사용자 정보 확인
+        const storedUserInfo = localStorage.getItem('user_info');
+        if (storedUserInfo) {
+          const parsedUserInfo = JSON.parse(storedUserInfo);
+          setUserInfo(parsedUserInfo);
         } else {
-          console.warn('⚠️ 사용자 정보 조회 실패, 더미 데이터 사용:', userResult.message);
-          const currentProvider = getCurrentProviderType();
-          // 더미 사용자 정보 설정
-          setUserInfo({
-            id: 'demo-user',
-            email: currentProvider === 'google' ? 'demo@gmail.com' : 
-                   currentProvider === 'kakao' ? 'demo@kakao.com' : 'demo@example.com',
-            nickname: currentProvider === 'google' ? 'Google 데모 사용자' : 
-                     currentProvider === 'kakao' ? 'Kakao 데모 사용자' : '이메일 데모 사용자',
-            provider: getCurrentProviderType()
-          });
+          // localStorage에 없으면 API에서 가져오기 시도
+          const userResult = await authManager.getCurrentUserInfo();
+          
+          if (userResult.success && userResult.data) {
+            setUserInfo(userResult.data);
+            // localStorage에 저장
+            localStorage.setItem('user_info', JSON.stringify(userResult.data));
+          } else {
+            // AuthManager 실패 시 쿠키 기반으로 직접 API 호출
+            try {
+              const userInfoResponse = await fetch('/api/v1/auth/members/user-info', {
+                method: 'GET',
+                headers: {
+                  'Accept': 'application/json',
+                  'X-Client-Type': 'web'
+                },
+                credentials: 'include' // 쿠키 포함
+              });
+
+              if (userInfoResponse.ok) {
+                const userInfo = await userInfoResponse.json();
+                
+                // data 부분만 사용자 정보로 설정
+                const actualUserInfo = userInfo.success && userInfo.data ? userInfo.data : userInfo;
+                setUserInfo(actualUserInfo);
+                localStorage.setItem('user_info', JSON.stringify(actualUserInfo));
+              } else {
+                throw new Error(`HTTP ${userInfoResponse.status}`);
+              }
+            } catch (directApiError) {
+              console.warn('⚠️ 쿠키 기반 사용자 정보 가져오기도 실패, 더미 데이터 사용:', directApiError);
+              const currentProvider = getCurrentProviderType();
+              // 더미 사용자 정보 설정
+              const dummyUserInfo = {
+                id: 'demo-user',
+                email: currentProvider === 'google' ? 'demo@gmail.com' : 
+                       currentProvider === 'kakao' ? 'demo@kakao.com' : 'demo@example.com',
+                nickname: currentProvider === 'google' ? 'Google 데모 사용자' : 
+                         currentProvider === 'kakao' ? 'Kakao 데모 사용자' : '이메일 데모 사용자',
+                provider: getCurrentProviderType()
+              };
+              setUserInfo(dummyUserInfo);
+              localStorage.setItem('user_info', JSON.stringify(dummyUserInfo));
+            }
+          }
         }
       } catch (userError) {
         console.warn('⚠️ 사용자 정보 API 오류, 더미 데이터 사용:', userError);
         const currentProvider = getCurrentProviderType();
         // 더미 사용자 정보 설정
-        setUserInfo({
+        const dummyUserInfo = {
           id: 'demo-user',
           email: currentProvider === 'google' ? 'demo@gmail.com' : 
                  currentProvider === 'kakao' ? 'demo@kakao.com' : 'demo@example.com',
           nickname: currentProvider === 'google' ? 'Google 데모 사용자' : 
                    currentProvider === 'kakao' ? 'Kakao 데모 사용자' : '이메일 데모 사용자',
           provider: getCurrentProviderType()
-        });
+        };
+        setUserInfo(dummyUserInfo);
+        localStorage.setItem('user_info', JSON.stringify(dummyUserInfo));
       }
     } catch (error) {
       console.error('❌ 사용자 데이터 로드 실패:', error);

@@ -129,6 +129,44 @@ const EmailLogin = ({ onLoginSuccess }: EmailLoginProps) => {
 
       if (result.success) {
         setMessage('✅ 로그인 성공!');
+        
+        // 로그인 성공 후 토큰이 저장될 때까지 대기
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // 토큰이 제대로 저장되었는지 확인
+        const { WebTokenStore } = await import('../auth/WebTokenStore');
+        const tokenStore = new WebTokenStore();
+        const tokenResult = await tokenStore.getToken();
+        
+        if (!tokenResult.success || !tokenResult.data?.accessToken) {
+          // authManager에서 토큰 정보를 직접 가져와서 저장 시도
+          try {
+            const tokenInfo = await authManager.getToken();
+            
+            if (tokenInfo.success && tokenInfo.data?.accessToken) {
+              await tokenStore.saveToken(tokenInfo.data);
+            } else {
+              // authManager에도 토큰이 없다면, 로그인 응답에서 직접 토큰을 찾아보자
+              if (result.data && (result.data.accessToken || (result.data as { token?: string }).token)) {
+                const accessToken = result.data.accessToken || (result.data as { token?: string }).token;
+                
+                if (accessToken) {
+                  // JWT에서 만료 시간 추출
+                  const { getExpirationFromJWT } = await import('../utils/jwtUtils');
+                  const expiredAt = getExpirationFromJWT(accessToken) || Date.now() + (60 * 60 * 1000);
+                  
+                  await tokenStore.saveToken({
+                    accessToken: accessToken,
+                    expiredAt: expiredAt
+                  });
+                }
+              }
+            }
+          } catch (tokenError) {
+            console.error('❌ 수동 토큰 저장 실패:', tokenError);
+          }
+        }
+        
         setTimeout(() => onLoginSuccess(), 1000);
       } else {
         setMessage(`❌ ${result.message}`);

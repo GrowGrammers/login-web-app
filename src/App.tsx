@@ -4,6 +4,71 @@ import { checkAuthStatus, getAuthManager, getCurrentProviderType } from './auth/
 import { handleOAuthLogout, handleEmailLogout, isOAuthProvider } from './utils/logoutUtils';
 import { processOAuthProvider, isOAuthCallbackPath, cleanupOAuthProgress } from './utils/oauthCallbackUtils';
 import { initializeTokenRefreshService } from './auth/TokenRefreshService';
+
+    /**
+     * 이메일 로그인 후 사용자 정보 가져오기
+     */
+    async function fetchUserInfoAfterEmailLogin(): Promise<void> {
+      try {
+        // 토큰이 저장될 때까지 잠시 대기
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // WebTokenStore에서 토큰 가져오기
+        const { WebTokenStore } = await import('./auth/WebTokenStore');
+        const tokenStore = new WebTokenStore();
+        const tokenResult = await tokenStore.getToken();
+        
+        if (tokenResult.success && tokenResult.data?.accessToken) {
+          const userInfoResponse = await fetch('/api/v1/auth/members/user-info', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${tokenResult.data.accessToken}`,
+              'Accept': 'application/json',
+              'X-Client-Type': 'web'
+            },
+            credentials: 'include'
+          });
+
+          if (userInfoResponse.ok) {
+            const userInfo = await userInfoResponse.json();
+            
+            // 사용자 정보를 localStorage에 저장 (data 부분만 저장)
+            if (userInfo.success && userInfo.data) {
+              localStorage.setItem('user_info', JSON.stringify(userInfo.data));
+            } else {
+              localStorage.setItem('user_info', JSON.stringify(userInfo));
+            }
+          }
+        } else {
+          // 토큰이 없어도 쿠키 기반으로 사용자 정보 가져오기 시도
+          try {
+            const userInfoResponse = await fetch('/api/v1/auth/members/user-info', {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'X-Client-Type': 'web'
+              },
+              credentials: 'include' // 쿠키 포함
+            });
+
+            if (userInfoResponse.ok) {
+              const userInfo = await userInfoResponse.json();
+              
+              // 사용자 정보를 localStorage에 저장 (data 부분만 저장)
+              if (userInfo.success && userInfo.data) {
+                localStorage.setItem('user_info', JSON.stringify(userInfo.data));
+              } else {
+                localStorage.setItem('user_info', JSON.stringify(userInfo));
+              }
+            }
+          } catch (cookieError) {
+            console.error('❌ 쿠키 기반 사용자 정보 가져오기 중 오류:', cookieError);
+          }
+        }
+      } catch (error) {
+        console.error('❌ 이메일 로그인 사용자 정보 가져오기 중 오류:', error);
+      }
+    }
 import LoginSelector from './components/LoginSelector';
 import EmailLogin from './components/EmailLogin';
 import GoogleLogin from './components/oauth/GoogleLogin';
@@ -136,6 +201,13 @@ function AppContent() {
     setIsAuthenticated(true);
     // 로그인 성공 시 토큰 갱신 서비스 시작
     initializeTokenRefreshService();
+    
+    // 사용자 정보 가져오기 시도 (이메일 로그인의 경우)
+    const currentProvider = getCurrentProviderType();
+    if (currentProvider === 'email') {
+      await fetchUserInfoAfterEmailLogin();
+    }
+    
     navigate('/dashboard');
     
     // 잠시 후 토큰 상태를 확인하여 UI 업데이트

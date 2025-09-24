@@ -26,6 +26,9 @@ export async function handleOAuthLogout(provider: 'google' | 'naver' | 'kakao', 
   localStorage.removeItem('oauth_in_progress');
   localStorage.removeItem('oauth_provider');
   localStorage.removeItem('current_provider_type');
+  
+  // 사용자 정보 정리
+  localStorage.removeItem('user_info');
 }
 
 /**
@@ -41,6 +44,9 @@ export async function handleEmailLogout(authManager: any, provider: string): Pro
   if (result.success) {
     // 이메일 로그아웃 시에도 provider type 정리
     localStorage.removeItem('current_provider_type');
+    
+    // 사용자 정보 정리
+    localStorage.removeItem('user_info');
   }
   
   return result;
