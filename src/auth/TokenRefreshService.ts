@@ -156,6 +156,7 @@ export class TokenRefreshService {
       
       // 웹에서는 refreshToken을 쿠키로 관리하므로 현재 provider 타입으로 갱신
       const currentProvider = getCurrentProviderType();
+      
       const refreshResult = await authManager.refreshToken({ 
         provider: currentProvider
       });

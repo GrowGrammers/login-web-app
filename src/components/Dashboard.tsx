@@ -35,16 +35,42 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     
     // 토큰 만료 시간 추적 타이머
     const interval = setInterval(async () => {
-      const tokenRefreshService = getTokenRefreshService();
-      const remaining = await tokenRefreshService.getTimeUntilExpiry();
-      setTimeUntilExpiry(remaining);
+      const authManager = getAuthManager();
+      const tokenResult = await authManager.getToken();
+      
+      if (tokenResult.success && tokenResult.data?.accessToken) {
+        // JWT에서 직접 남은 시간 계산
+        const { getTimeUntilExpiryFromJWT } = await import('../utils/jwtUtils');
+        const remainingFromJWT = getTimeUntilExpiryFromJWT(tokenResult.data.accessToken);
+        if (remainingFromJWT !== null) {
+          setTimeUntilExpiry(remainingFromJWT);
+        } else {
+          // JWT 파싱 실패시 폴백
+          const tokenRefreshService = getTokenRefreshService();
+          const remaining = await tokenRefreshService.getTimeUntilExpiry();
+          setTimeUntilExpiry(remaining);
+        }
+      }
     }, 30000); // 30초마다 확인
     
     // 즉시 한 번 실행
     (async () => {
-      const tokenRefreshService = getTokenRefreshService();
-      const remaining = await tokenRefreshService.getTimeUntilExpiry();
-      setTimeUntilExpiry(remaining);
+      const authManager = getAuthManager();
+      const tokenResult = await authManager.getToken();
+      
+      if (tokenResult.success && tokenResult.data?.accessToken) {
+        // JWT에서 직접 남은 시간 계산
+        const { getTimeUntilExpiryFromJWT } = await import('../utils/jwtUtils');
+        const remainingFromJWT = getTimeUntilExpiryFromJWT(tokenResult.data.accessToken);
+        if (remainingFromJWT !== null) {
+          setTimeUntilExpiry(remainingFromJWT);
+        } else {
+          // JWT 파싱 실패시 폴백
+          const tokenRefreshService = getTokenRefreshService();
+          const remaining = await tokenRefreshService.getTimeUntilExpiry();
+          setTimeUntilExpiry(remaining);
+        }
+      }
     })();
     
     return () => clearInterval(interval);
@@ -60,8 +86,21 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       
       if (tokenResult.success && tokenResult.data) {
         setTokenInfo(tokenResult.data);
+        
+        // JWT에서 직접 남은 시간 계산하여 즉시 업데이트
+        const { getTimeUntilExpiryFromJWT } = await import('../utils/jwtUtils');
+        const remainingFromJWT = getTimeUntilExpiryFromJWT(tokenResult.data.accessToken);
+        if (remainingFromJWT !== null) {
+          setTimeUntilExpiry(remainingFromJWT);
+        } else {
+          // JWT 파싱 실패시 폴백
+          const tokenRefreshService = getTokenRefreshService();
+          const remaining = await tokenRefreshService.getTimeUntilExpiry();
+          setTimeUntilExpiry(remaining);
+        }
       } else {
         setTokenInfo(null);
+        setTimeUntilExpiry(null);
       }
 
       // 사용자 정보 가져오기 (localStorage에서 먼저 확인)
@@ -71,51 +110,53 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         if (storedUserInfo) {
           const parsedUserInfo = JSON.parse(storedUserInfo);
           setUserInfo(parsedUserInfo);
+          // 캐시된 데이터가 있으면 API 호출하지 않음 (중복 요청 방지)
+          return;
+        }
+        
+        // localStorage에 없을 때만 API 호출 (한 번만)
+        const userResult = await authManager.getCurrentUserInfo();
+        
+        if (userResult.success && userResult.data) {
+          setUserInfo(userResult.data);
+          // localStorage에 저장
+          localStorage.setItem('user_info', JSON.stringify(userResult.data));
         } else {
-          // localStorage에 없으면 API에서 가져오기 시도
-          const userResult = await authManager.getCurrentUserInfo();
-          
-          if (userResult.success && userResult.data) {
-            setUserInfo(userResult.data);
-            // localStorage에 저장
-            localStorage.setItem('user_info', JSON.stringify(userResult.data));
-          } else {
-            // AuthManager 실패 시 쿠키 기반으로 직접 API 호출
-            try {
-              const userInfoResponse = await fetch('/api/v1/auth/members/user-info', {
-                method: 'GET',
-                headers: {
-                  'Accept': 'application/json',
-                  'X-Client-Type': 'web'
-                },
-                credentials: 'include' // 쿠키 포함
-              });
+          // AuthManager 실패 시 쿠키 기반으로 직접 API 호출 (한 번만)
+          try {
+            const userInfoResponse = await fetch('/api/v1/auth/members/user-info', {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'X-Client-Type': 'web'
+              },
+              credentials: 'include' // 쿠키 포함
+            });
 
-              if (userInfoResponse.ok) {
-                const userInfo = await userInfoResponse.json();
-                
-                // data 부분만 사용자 정보로 설정
-                const actualUserInfo = userInfo.success && userInfo.data ? userInfo.data : userInfo;
-                setUserInfo(actualUserInfo);
-                localStorage.setItem('user_info', JSON.stringify(actualUserInfo));
-              } else {
-                throw new Error(`HTTP ${userInfoResponse.status}`);
-              }
-            } catch (directApiError) {
-              console.warn('⚠️ 쿠키 기반 사용자 정보 가져오기도 실패, 더미 데이터 사용:', directApiError);
-              const currentProvider = getCurrentProviderType();
-              // 더미 사용자 정보 설정
-              const dummyUserInfo = {
-                id: 'demo-user',
-                email: currentProvider === 'google' ? 'demo@gmail.com' : 
-                       currentProvider === 'kakao' ? 'demo@kakao.com' : 'demo@example.com',
-                nickname: currentProvider === 'google' ? 'Google 데모 사용자' : 
-                         currentProvider === 'kakao' ? 'Kakao 데모 사용자' : '이메일 데모 사용자',
-                provider: getCurrentProviderType()
-              };
-              setUserInfo(dummyUserInfo);
-              localStorage.setItem('user_info', JSON.stringify(dummyUserInfo));
+            if (userInfoResponse.ok) {
+              const userInfo = await userInfoResponse.json();
+              
+              // data 부분만 사용자 정보로 설정
+              const actualUserInfo = userInfo.success && userInfo.data ? userInfo.data : userInfo;
+              setUserInfo(actualUserInfo);
+              localStorage.setItem('user_info', JSON.stringify(actualUserInfo));
+            } else {
+              throw new Error(`HTTP ${userInfoResponse.status}`);
             }
+          } catch (directApiError) {
+            console.warn('⚠️ 쿠키 기반 사용자 정보 가져오기도 실패, 더미 데이터 사용:', directApiError);
+            const currentProvider = getCurrentProviderType();
+            // 더미 사용자 정보 설정
+            const dummyUserInfo = {
+              id: 'demo-user',
+              email: currentProvider === 'google' ? 'demo@gmail.com' : 
+                     currentProvider === 'kakao' ? 'demo@kakao.com' : 'demo@example.com',
+              nickname: currentProvider === 'google' ? 'Google 데모 사용자' : 
+                       currentProvider === 'kakao' ? 'Kakao 데모 사용자' : '이메일 데모 사용자',
+              provider: getCurrentProviderType()
+            };
+            setUserInfo(dummyUserInfo);
+            localStorage.setItem('user_info', JSON.stringify(dummyUserInfo));
           }
         }
       } catch (userError) {
@@ -150,11 +191,37 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
 
       if (success) {
         alert('✅ 토큰이 성공적으로 갱신되었습니다.');
-        await loadUserData(); // 데이터 새로고침
         
-        // 만료 시간 즉시 업데이트
-        const remaining = await tokenRefreshService.getTimeUntilExpiry();
-        setTimeUntilExpiry(remaining);
+        // 토큰 갱신 후 잠시 대기 (서버에서 토큰이 완전히 갱신될 때까지)
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // 토큰 정보 강제 새로고침 (여러 번 시도)
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        while (retryCount < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 200)); // 200ms 대기
+          
+          const authManager = getAuthManager();
+          const tokenResult = await authManager.getToken();
+          
+          if (tokenResult.success && tokenResult.data) {
+            setTokenInfo(tokenResult.data);
+            
+            // JWT에서 직접 남은 시간 계산하여 즉시 업데이트
+            const { getTimeUntilExpiryFromJWT } = await import('../utils/jwtUtils');
+            const remainingFromJWT = getTimeUntilExpiryFromJWT(tokenResult.data.accessToken);
+            
+            if (remainingFromJWT !== null) {
+              setTimeUntilExpiry(remainingFromJWT);
+              break; // 성공하면 루프 종료
+            }
+          }
+          
+          retryCount++;
+        }
+        
+        await loadUserData(); // 데이터 새로고침
       } else {
         alert('❌ 토큰 갱신에 실패했습니다.');
       }

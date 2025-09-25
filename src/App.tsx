@@ -13,60 +13,11 @@ import { initializeTokenRefreshService } from './auth/TokenRefreshService';
         // 토큰이 저장될 때까지 잠시 대기
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // WebTokenStore에서 토큰 가져오기
-        const { WebTokenStore } = await import('./auth/WebTokenStore');
-        const tokenStore = new WebTokenStore();
-        const tokenResult = await tokenStore.getToken();
-        
-        if (tokenResult.success && tokenResult.data?.accessToken) {
-          const userInfoResponse = await fetch('/api/v1/auth/members/user-info', {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${tokenResult.data.accessToken}`,
-              'Accept': 'application/json',
-              'X-Client-Type': 'web'
-            },
-            credentials: 'include'
-          });
-
-          if (userInfoResponse.ok) {
-            const userInfo = await userInfoResponse.json();
-            
-            // 사용자 정보를 localStorage에 저장 (data 부분만 저장)
-            if (userInfo.success && userInfo.data) {
-              localStorage.setItem('user_info', JSON.stringify(userInfo.data));
-            } else {
-              localStorage.setItem('user_info', JSON.stringify(userInfo));
-            }
-          }
-        } else {
-          // 토큰이 없어도 쿠키 기반으로 사용자 정보 가져오기 시도
-          try {
-            const userInfoResponse = await fetch('/api/v1/auth/members/user-info', {
-              method: 'GET',
-              headers: {
-                'Accept': 'application/json',
-                'X-Client-Type': 'web'
-              },
-              credentials: 'include' // 쿠키 포함
-            });
-
-            if (userInfoResponse.ok) {
-              const userInfo = await userInfoResponse.json();
-              
-              // 사용자 정보를 localStorage에 저장 (data 부분만 저장)
-              if (userInfo.success && userInfo.data) {
-                localStorage.setItem('user_info', JSON.stringify(userInfo.data));
-              } else {
-                localStorage.setItem('user_info', JSON.stringify(userInfo));
-              }
-            }
-          } catch (cookieError) {
-            console.error('❌ 쿠키 기반 사용자 정보 가져오기 중 오류:', cookieError);
-          }
-        }
+        // Dashboard 컴포넌트에서 이미 user-info API를 호출하므로 여기서는 중복 호출하지 않음
+        // 단순히 localStorage에 플래그만 설정하여 Dashboard에서 API 호출하도록 함
+        console.log('✅ 이메일 로그인 완료 - Dashboard에서 사용자 정보를 가져올 예정');
       } catch (error) {
-        console.error('❌ 이메일 로그인 사용자 정보 가져오기 중 오류:', error);
+        console.error('❌ 이메일 로그인 후처리 중 오류:', error);
       }
     }
 import LoginSelector from './components/LoginSelector';
@@ -221,43 +172,29 @@ function AppContent() {
       const authManager = getAuthManager();
       const currentProvider = getCurrentProviderType();
       
+      // 모든 로그인 방식 통일: 백엔드 API 호출
+      let result;
       if (isOAuthProvider(currentProvider)) {
-        // OAuth 로그인: 프론트엔드에서만 로그아웃 처리
-        await handleOAuthLogout(currentProvider, authManager);
-        
-        // 인증 상태 업데이트 및 스플래시 화면으로 돌아가기
+        // OAuth 로그인: API 호출 방식으로 통일
+        result = await handleOAuthLogout(currentProvider, authManager);
+      } else {
+        // 이메일 로그인: 기존 방식 유지
+        result = await handleEmailLogout(authManager, currentProvider);
+      }
+      
+      if (result.success) {
         setIsAuthenticated(false);
         setShowSplash(true);
         alert('✅ 로그아웃되었습니다.');
         navigate('/');
-        
       } else {
-        // 이메일 로그인: 백엔드 API 호출
-        const result = await handleEmailLogout(authManager, currentProvider);
-        
-        if (result.success) {
-          setIsAuthenticated(false);
-          setShowSplash(true);
-          alert('✅ 로그아웃되었습니다.');
-          navigate('/');
-        } else {
-          console.error('❌ 로그아웃 실패:', result.message);
-          alert('로그아웃에 실패했습니다: ' + result.message);
-        }
+        console.error('❌ 로그아웃 실패:', result.message);
+        alert('로그아웃에 실패했습니다: ' + result.message);
       }
       
     } catch (error) {
       console.error('❌ 로그아웃 중 오류:', error);
-      const currentProvider = getCurrentProviderType();
-      
-      if (isOAuthProvider(currentProvider)) {
-        // OAuth 로그인의 경우 오류가 있어도 스플래시 화면으로 돌아가기
-        setIsAuthenticated(false);
-        setShowSplash(true);
-        navigate('/');
-      } else {
-        alert('로그아웃 중 오류가 발생했습니다.');
-      }
+      alert('로그아웃 중 오류가 발생했습니다.');
     }
   };
 

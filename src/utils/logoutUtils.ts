@@ -7,28 +7,34 @@
  * @param provider OAuth 제공자 ('google' | 'naver' | 'kakao')
  * @param authManager AuthManager 인스턴스
  */
-export async function handleOAuthLogout(provider: 'google' | 'naver' | 'kakao', authManager: any): Promise<void> {
-  // TokenStore에서 토큰 제거
-  const tokenStore = authManager['tokenStore'];
-  if (tokenStore && typeof tokenStore.removeToken === 'function') {
-    await tokenStore.removeToken();
+export async function handleOAuthLogout(provider: 'google' | 'naver' | 'kakao', authManager: any): Promise<{ success: boolean; message?: string }> {
+  try {
+    // 이메일 로그아웃과 동일한 방식으로 API 호출
+    const result = await authManager.logout({ 
+      provider: provider
+    });
+    
+    if (result.success) {
+      // OAuth 관련 localStorage 정리
+      localStorage.removeItem(`${provider}_auth_code`);
+      localStorage.removeItem(`${provider}_oauth_code_verifier`);
+      localStorage.removeItem(`${provider}_oauth_state`);
+      localStorage.removeItem('oauth_processing');
+      localStorage.removeItem('oauth_in_progress');
+      localStorage.removeItem('oauth_provider');
+      
+      // provider type 정리
+      localStorage.removeItem('current_provider_type');
+      
+      // 사용자 정보 정리
+      localStorage.removeItem('user_info');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error(`❌ ${provider} 로그아웃 API 호출 실패:`, error);
+    return { success: false, message: error instanceof Error ? error.message : '알 수 없는 오류' };
   }
-  
-  // 쿠키에서 토큰들 삭제
-  document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-  document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-  
-  // OAuth 관련 localStorage 정리
-  localStorage.removeItem(`${provider}_auth_code`);
-  localStorage.removeItem(`${provider}_oauth_code_verifier`);
-  localStorage.removeItem(`${provider}_oauth_state`);
-  localStorage.removeItem('oauth_processing');
-  localStorage.removeItem('oauth_in_progress');
-  localStorage.removeItem('oauth_provider');
-  localStorage.removeItem('current_provider_type');
-  
-  // 사용자 정보 정리
-  localStorage.removeItem('user_info');
 }
 
 /**

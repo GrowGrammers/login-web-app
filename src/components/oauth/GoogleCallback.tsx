@@ -75,10 +75,25 @@ const GoogleCallback = () => {
         }
         
         if (oauthInProgress === 'true' && oauthProvider === 'google') {
+          // 인가 코드 재사용 방지: 이미 처리된 코드인지 확인
+          const existingCode = localStorage.getItem('google_auth_code');
+          if (existingCode === code) {
+            console.warn('⚠️ 이미 처리된 인가 코드입니다. 중복 처리 방지');
+            localStorage.removeItem('oauth_in_progress');
+            localStorage.removeItem('oauth_provider');
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 1000);
+            return;
+          }
+          
           // localStorage에 인증 코드 저장하고 메인 페이지로 리다이렉트
           localStorage.setItem('google_auth_code', code);
           localStorage.removeItem('oauth_in_progress');
           localStorage.removeItem('oauth_provider');
+          
+          // 인가 코드 사용 플래그 설정 (재사용 방지)
+          localStorage.setItem('google_code_used', 'false');
           
           setTimeout(() => {
             window.location.href = '/';
