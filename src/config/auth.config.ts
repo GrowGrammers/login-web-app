@@ -40,7 +40,7 @@ const API_CONFIGS = {
     }
   },
   production: {
-    apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
+    apiBaseUrl: import.meta.env.VITE_API_BASE_URL ,
     timeout: 15000,
     retryCount: 3,
     endpoints: {

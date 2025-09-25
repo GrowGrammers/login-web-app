@@ -14,5 +14,12 @@ export default defineConfig({
         cookiePathRewrite: '/',
       }
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
+      }
+    }
   }
 })
