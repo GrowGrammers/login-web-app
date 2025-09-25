@@ -26,10 +26,20 @@ export async function handleOAuthProviderCallback(
   globalOAuthProcessing: { value: boolean }
 ): Promise<{ success: boolean; message?: string }> {
   try {
+    // 인가 코드 재사용 방지: 이미 사용된 코드인지 확인
+    const codeUsedFlag = localStorage.getItem(`${provider}_code_used`);
+    if (codeUsedFlag === 'true') {
+      console.warn(`⚠️ ${provider} 인가 코드가 이미 사용되었습니다. 중복 처리 방지`);
+      return { success: false, message: '인가 코드가 이미 사용되었습니다.' };
+    }
+    
     // 처리 중 플래그 설정 (이중 보안)
     localStorage.setItem('oauth_processing', 'true');
     globalOAuthProcessing.value = true;
     setShowSplash(false);
+    
+    // 인가 코드 사용 플래그 설정 (재사용 방지)
+    localStorage.setItem(`${provider}_code_used`, 'true');
     
     // AuthManager 설정 및 로그인 처리
     const { resetAuthManager } = await import('../auth/authManager');
@@ -64,6 +74,7 @@ export async function handleOAuthProviderCallback(
     localStorage.removeItem(`${provider}_auth_code`);
     localStorage.removeItem(`${provider}_oauth_code_verifier`);
     localStorage.removeItem(`${provider}_oauth_state`);
+    localStorage.removeItem(`${provider}_code_used`); // 인가 코드 사용 플래그도 삭제
     localStorage.removeItem('oauth_processing');
     globalOAuthProcessing.value = false;
   }
