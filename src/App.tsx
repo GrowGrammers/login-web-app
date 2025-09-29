@@ -214,8 +214,7 @@ function AppContent() {
   if (showSplash || location.pathname === '/') {
     return (
       <div className="min-h-screen flex flex-col max-w-xl mx-auto bg-white border-l border-r border-gray-200 shadow-xl">
-        <div className="min-h-screen flex flex-col justify-center items-center p-8 text-center">
-          <h3 className="text-3xl font-bold text-gray-900 mb-4">Login</h3>
+        <div className="min-h-screen flex flex-col justify-end items-center p-8">
           <button 
             className="w-full max-w-md p-4 bg-gray-900 text-white rounded-xl text-base font-semibold hover:bg-gray-700 hover:-translate-y-0.5 transition-all duration-200"
             onClick={handleStartApp}
