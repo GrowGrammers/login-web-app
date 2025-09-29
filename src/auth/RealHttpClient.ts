@@ -137,7 +137,7 @@ export class RealHttpClient implements HttpClient {
             });
             
             // 토큰 저장 후 사용자 정보 가져오기
-            await this.fetchUserInfo(accessToken);
+            await this.fetchUserInfo();
           } catch (tokenError) {
             console.error('❌ 토큰 저장 실패:', tokenError);
           }
@@ -170,33 +170,12 @@ export class RealHttpClient implements HttpClient {
   }
 
   /**
-   * 사용자 정보 가져오기
+   * 사용자 정보 가져오기 (중복 호출 방지를 위해 비활성화)
+   * Dashboard 컴포넌트에서만 user-info API를 호출하도록 함
    */
-  private async fetchUserInfo(accessToken: string): Promise<void> {
-    try {
-      const userInfoResponse = await fetch('/api/v1/auth/members/user-info', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Accept': 'application/json',
-          'X-Client-Type': 'web'
-        },
-        credentials: 'include'
-      });
-
-      if (userInfoResponse.ok) {
-        const userInfo = await userInfoResponse.json();
-        
-        // 사용자 정보를 localStorage에 저장 (data 부분만 저장)
-        if (userInfo.success && userInfo.data) {
-          localStorage.setItem('user_info', JSON.stringify(userInfo.data));
-        } else {
-          localStorage.setItem('user_info', JSON.stringify(userInfo));
-        }
-      }
-    } catch (error) {
-      console.error('❌ 사용자 정보 가져오기 중 오류:', error);
-    }
+  private async fetchUserInfo(): Promise<void> {
+    // 중복 API 호출 방지를 위해 비활성화
+    // Dashboard 컴포넌트에서 이미 user-info API를 호출하므로 여기서는 호출하지 않음
   }
 
   /**
