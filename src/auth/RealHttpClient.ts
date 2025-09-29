@@ -117,8 +117,8 @@ export class RealHttpClient implements HttpClient {
       
       
 
-      // 로그인 응답의 Authorization 헤더에서 토큰 추출 (이메일, Google, Kakao, Naver 공통)
-      if ((url.includes('/auth/email/login') || url.includes('/auth/members/email-login') || url.includes('/auth/google/login') || url.includes('/auth/kakao/login') || url.includes('/auth/naver/login')) && response.ok && authHeaderValue) {
+      // 로그인 및 토큰 갱신 응답의 Authorization 헤더에서 토큰 추출 (이메일, Google, Kakao, Naver, Refresh 공통)
+      if ((url.includes('/auth/email/login') || url.includes('/auth/members/email-login') || url.includes('/auth/google/login') || url.includes('/auth/kakao/login') || url.includes('/auth/naver/login') || url.includes('/auth/refresh') || url.includes('/auth/members/refresh')) && response.ok && authHeaderValue) {
         // Authorization 헤더에서 Bearer 토큰 추출
         const authHeader = authHeaderValue;
         if (authHeader.startsWith('Bearer ')) {

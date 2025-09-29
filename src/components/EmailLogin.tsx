@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getAuthManager, resetAuthManager } from '../auth/authManager';
 
 interface EmailLoginProps {
@@ -14,6 +14,9 @@ const EmailLogin = ({ onLoginSuccess }: EmailLoginProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<'email' | 'verification'>('email');
   const [message, setMessage] = useState('');
+  const [timeLeft, setTimeLeft] = useState(300); // 5분 = 300초
+  const [isTimerExpired, setIsTimerExpired] = useState(false);
+  const timerRef = useRef<number | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -71,12 +74,65 @@ const EmailLogin = ({ onLoginSuccess }: EmailLoginProps) => {
     }
   };
 
+  // 타이머 시작
+  const startTimer = () => {
+    setTimeLeft(300); // 5분으로 리셋
+    setIsTimerExpired(false);
+    
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          setIsTimerExpired(true);
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  // 타이머 정리
+  const clearTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  // 시간 포맷팅 (MM:SS)
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  // 이메일 문의 알림
+  const handleEmailInquiry = () => {
+    alert('이메일이 오지 않는 경우 문의는 추후 구현 예정입니다.');
+  };
+
   // AuthManager 초기화
   useEffect(() => {
     resetAuthManager('email');
     setStep('email');
     setMessage('');
     setFormData({ email: '', verifyCode: '' });
+    setTimeLeft(300);
+    setIsTimerExpired(false);
+    clearTimer();
+  }, []);
+
+  // 컴포넌트 언마운트 시 타이머 정리
+  useEffect(() => {
+    return () => {
+      clearTimer();
+    };
   }, []);
 
   const requestEmailVerification = async () => {
@@ -87,8 +143,13 @@ const EmailLogin = ({ onLoginSuccess }: EmailLoginProps) => {
 
     // 버튼을 누르자마자 바로 인증번호 입력 화면으로 이동
     setStep('verification');
-    setMessage('✅ 인증번호가 발송되었습니다. 이메일을 확인해주세요.');
+    setMessage('📧 이메일을 보내고 있습니다...');
     setIsLoading(true);
+    startTimer(); // 타이머 시작
+    
+    // 인증번호 입력 필드 초기화
+    setVerificationDigits(['', '', '', '', '', '']);
+    setFormData(prev => ({ ...prev, verifyCode: '' }));
 
     try {
       const authManager = getAuthManager();
@@ -97,6 +158,7 @@ const EmailLogin = ({ onLoginSuccess }: EmailLoginProps) => {
       });
 
       if (result.success) {
+        setMessage('✅ 인증번호가 발송되었습니다. 이메일을 확인해주세요.');
         //console.log('✅ 이메일 인증번호 요청 성공');
       } else {
         setMessage(`❌ ${result.message}`);
@@ -136,35 +198,11 @@ const EmailLogin = ({ onLoginSuccess }: EmailLoginProps) => {
         // 토큰이 제대로 저장되었는지 확인
         const { WebTokenStore } = await import('../auth/WebTokenStore');
         const tokenStore = new WebTokenStore();
+        // RealHttpClient에서 이미 토큰을 저장했으므로 추가 처리 불필요
+        // 토큰이 제대로 저장되었는지 확인만 함
         const tokenResult = await tokenStore.getToken();
-        
         if (!tokenResult.success || !tokenResult.data?.accessToken) {
-          // authManager에서 토큰 정보를 직접 가져와서 저장 시도
-          try {
-            const tokenInfo = await authManager.getToken();
-            
-            if (tokenInfo.success && tokenInfo.data?.accessToken) {
-              await tokenStore.saveToken(tokenInfo.data);
-            } else {
-              // authManager에도 토큰이 없다면, 로그인 응답에서 직접 토큰을 찾아보자
-              if (result.data && (result.data.accessToken || (result.data as { token?: string }).token)) {
-                const accessToken = result.data.accessToken || (result.data as { token?: string }).token;
-                
-                if (accessToken) {
-                  // JWT에서 만료 시간 추출
-                  const { getExpirationFromJWT } = await import('../utils/jwtUtils');
-                  const expiredAt = getExpirationFromJWT(accessToken) || Date.now() + (60 * 60 * 1000);
-                  
-                  await tokenStore.saveToken({
-                    accessToken: accessToken,
-                    expiredAt: expiredAt
-                  });
-                }
-              }
-            }
-          } catch (tokenError) {
-            console.error('❌ 수동 토큰 저장 실패:', tokenError);
-          }
+          console.warn('⚠️ 토큰이 저장되지 않았습니다. RealHttpClient에서 처리되었는지 확인하세요.');
         }
         
         setTimeout(() => onLoginSuccess(), 1000);
@@ -185,6 +223,9 @@ const EmailLogin = ({ onLoginSuccess }: EmailLoginProps) => {
     setFormData({ email: '', verifyCode: '' });
     setVerificationDigits(['', '', '', '', '', '']);
     setMessage('');
+    clearTimer();
+    setTimeLeft(300);
+    setIsTimerExpired(false);
   };
 
 
@@ -265,8 +306,15 @@ const EmailLogin = ({ onLoginSuccess }: EmailLoginProps) => {
                 </div>
                 
                 <div className="text-base text-gray-600 mb-0 text-right pr-4">
-                  5:00
+                  {formatTime(timeLeft)}
                 </div>
+
+                {/* 타이머 만료 안내 */}
+                {isTimerExpired && (
+                  <div className="p-4 rounded-xl mb-4 font-medium text-sm bg-orange-100 text-orange-800">
+                    시간이 만료되었습니다. 인증번호를 다시 요청해주세요.
+                  </div>
+                )}
 
                 {/* 메시지 표시 */}
                 {message && (
@@ -280,16 +328,31 @@ const EmailLogin = ({ onLoginSuccess }: EmailLoginProps) => {
                 )}
 
                 <div className="m-0">
-                  <p className="text-sm text-gray-600 mb-0 underline">이메일이 안 오나요?</p>
+                  <p 
+                    className="text-sm text-gray-600 mb-0 underline cursor-pointer hover:text-gray-900 transition-colors duration-200"
+                    onClick={handleEmailInquiry}
+                  >
+                    이메일이 안 오나요?
+                  </p>
                 </div>
 
-                <button
-                  onClick={handleEmailLogin}
-                  disabled={isLoading || formData.verifyCode.length !== 6}
-                  className="w-full p-4 bg-gray-900 text-white rounded-xl text-base font-semibold hover:bg-gray-700 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                >
-                  {isLoading ? '로그인 중...' : '계속하기'}
-                </button>
+                {isTimerExpired ? (
+                  <button
+                    onClick={requestEmailVerification}
+                    disabled={isLoading}
+                    className="w-full p-4 bg-orange-500 text-white rounded-xl text-base font-semibold hover:bg-orange-600 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  >
+                    인증번호 다시 받기
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleEmailLogin}
+                    disabled={isLoading || formData.verifyCode.length !== 6}
+                    className="w-full p-4 bg-gray-900 text-white rounded-xl text-base font-semibold hover:bg-gray-700 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  >
+                    계속하기
+                  </button>
+                )}
               </div>
             </div>
           )}
