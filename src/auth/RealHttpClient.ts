@@ -60,15 +60,14 @@ export class RealHttpClient implements HttpClient {
       // GET/HEAD는 바디 금지
       const skipBody = isBodylessMethod(method);
       
-      // 네이버 로그인 요청인 경우 state와 grantType 추가
+      // 네이버 로그인 요청인 경우 state 추가
       let finalBody = body;
       if (!skipBody && url.includes('/auth/naver/login') && body && typeof body === 'object') {
         const naverState = localStorage.getItem('naver_oauth_state');
         if (naverState) {
           finalBody = {
             ...body,
-            state: naverState,
-            grantType: 'authorization_code'
+            state: naverState
           };
         }
       }
