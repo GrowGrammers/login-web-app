@@ -236,7 +236,7 @@ const EmailLogin = ({ onLoginSuccess }: EmailLoginProps) => {
       {step === 'email' && (
         <div className="px-4 py-16 pb-4 text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">이메일로 계속하기</h2>
-          <p className="text-sm text-gray-600">이메일을 등록하거나 가입하세요</p>
+          <p className="text-sm text-gray-600">이메일로 로그인하거나 가입하세요</p>
         </div>
       )}
 

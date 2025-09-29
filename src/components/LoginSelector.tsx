@@ -66,21 +66,21 @@ const LoginSelector = ({ onBack }: LoginSelectorProps) => {
             className="flex-1 h-16 border border-gray-200 rounded-2xl bg-white cursor-pointer transition-all duration-300 flex items-center justify-center shadow-sm hover:-translate-y-1 hover:shadow-md"
             onClick={() => handleMethodSelect('kakao')}
           >
-            <div className="text-xl">💛</div>
+            <img src="/kakao_ic.png" alt="Kakao" className="w-8 h-8" />
           </button>
           
           <button 
             className="flex-1 h-16 border border-gray-200 rounded-2xl bg-white cursor-pointer transition-all duration-300 flex items-center justify-center shadow-sm hover:-translate-y-1 hover:shadow-md"
             onClick={() => handleMethodSelect('naver')}
           >
-            <div className="text-xl">🔵</div>
+            <img src="/naver_ic.png" alt="Naver" className="w-8 h-8" />
           </button>
           
           <button 
             className="flex-1 h-16 border border-gray-200 rounded-2xl bg-white cursor-pointer transition-all duration-300 flex items-center justify-center shadow-sm hover:-translate-y-1 hover:shadow-md"
             onClick={() => handleMethodSelect('google')}
           >
-            <div className="text-xl">🔍</div>
+            <img src="/google_ic.svg" alt="Google" className="w-8 h-8" />
           </button>
         </div>
         
