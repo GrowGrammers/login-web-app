@@ -11,33 +11,26 @@ import type { AuthManager, AuthProviderType } from 'growgrammers-auth-core';
  */
 export async function handleOAuthLogout(provider: 'google' | 'naver' | 'kakao', authManager: AuthManager): Promise<{ success: boolean; message?: string }> {
   try {
-    // TokenStore에서 토큰 제거 (private 속성이므로 직접 접근)
-    try {
-      const tokenStore = (authManager as unknown as { tokenStore?: { removeToken: () => Promise<void> } }).tokenStore;
-      if (tokenStore && typeof tokenStore.removeToken === 'function') {
-        await tokenStore.removeToken();
-      }
-    } catch (error) {
-      console.warn('토큰 스토어 접근 실패:', error);
+    // 백엔드 API 호출로 로그아웃 처리 (이메일 로그인과 동일하게)
+    const result = await authManager.logout({ 
+      provider: provider as AuthProviderType
+    });
+    
+    if (result.success) {
+      // OAuth 관련 localStorage 정리
+      localStorage.removeItem(`${provider}_auth_code`);
+      localStorage.removeItem(`${provider}_oauth_code_verifier`);
+      localStorage.removeItem(`${provider}_oauth_state`);
+      localStorage.removeItem('oauth_processing');
+      localStorage.removeItem('oauth_in_progress');
+      localStorage.removeItem('oauth_provider');
+      localStorage.removeItem('current_provider_type');
+      
+      // 사용자 정보 정리
+      localStorage.removeItem('user_info');
     }
     
-    // 쿠키에서 토큰들 삭제
-    document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    
-    // OAuth 관련 localStorage 정리
-    localStorage.removeItem(`${provider}_auth_code`);
-    localStorage.removeItem(`${provider}_oauth_code_verifier`);
-    localStorage.removeItem(`${provider}_oauth_state`);
-    localStorage.removeItem('oauth_processing');
-    localStorage.removeItem('oauth_in_progress');
-    localStorage.removeItem('oauth_provider');
-    localStorage.removeItem('current_provider_type');
-    
-    // 사용자 정보 정리
-    localStorage.removeItem('user_info');
-    
-    return { success: true };
+    return result;
   } catch (error) {
     console.error('OAuth 로그아웃 중 오류:', error);
     return { 
