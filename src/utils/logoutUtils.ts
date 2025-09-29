@@ -2,16 +2,22 @@
  * 로그아웃 관련 유틸리티 함수들
  */
 
+import type { AuthManager, AuthProviderType } from 'growgrammers-auth-core';
+
 /**
  * OAuth 제공자별 로그아웃 처리 (구글, 네이버, 카카오)
  * @param provider OAuth 제공자 ('google' | 'naver' | 'kakao')
  * @param authManager AuthManager 인스턴스
  */
-export async function handleOAuthLogout(provider: 'google' | 'naver' | 'kakao', authManager: any): Promise<void> {
-  // TokenStore에서 토큰 제거
-  const tokenStore = authManager['tokenStore'];
-  if (tokenStore && typeof tokenStore.removeToken === 'function') {
-    await tokenStore.removeToken();
+export async function handleOAuthLogout(provider: 'google' | 'naver' | 'kakao', authManager: AuthManager): Promise<void> {
+  // TokenStore에서 토큰 제거 (private 속성이므로 직접 접근)
+  try {
+    const tokenStore = (authManager as unknown as { tokenStore?: { removeToken: () => Promise<void> } }).tokenStore;
+    if (tokenStore && typeof tokenStore.removeToken === 'function') {
+      await tokenStore.removeToken();
+    }
+  } catch (error) {
+    console.warn('토큰 스토어 접근 실패:', error);
   }
   
   // 쿠키에서 토큰들 삭제
@@ -36,9 +42,9 @@ export async function handleOAuthLogout(provider: 'google' | 'naver' | 'kakao', 
  * @param authManager AuthManager 인스턴스
  * @param provider 현재 제공자
  */
-export async function handleEmailLogout(authManager: any, provider: string): Promise<{ success: boolean; message?: string }> {
+export async function handleEmailLogout(authManager: AuthManager, provider: string): Promise<{ success: boolean; message?: string }> {
   const result = await authManager.logout({ 
-    provider: provider
+    provider: provider as AuthProviderType
   });
   
   if (result.success) {
