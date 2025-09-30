@@ -85,7 +85,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
 
   // 타이머 시작
   const startTimer = () => {
-    setTimeLeft(10); // 5분으로 리셋
+    setTimeLeft(300); // 5분으로 리셋
     setIsTimerExpired(false);
     
     if (timerRef.current) {
