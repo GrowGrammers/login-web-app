@@ -41,11 +41,11 @@ const NaverLogin = () => {
       localStorage.setItem('naver_oauth_state', state);
       
       // Naver OAuth URL 생성 (PKCE 포함)
-      const naverAuthUrl = `https://nid.naver.com/oauth2.0/authorize?` +
+      const naverAuthUrl = `https://nid.naver.com/oauth2/authorize?` +
         `client_id=${encodeURIComponent(clientId)}&` +
         `redirect_uri=${encodeURIComponent(finalRedirectUri)}&` +
         `response_type=code&` +
-        `scope=${encodeURIComponent('name email')}&` +
+        `scope=${encodeURIComponent('openid')}&` +
         `code_challenge=${encodeURIComponent(codeChallenge)}&` +
         `code_challenge_method=S256&` +
         `state=${encodeURIComponent(state)}`;
