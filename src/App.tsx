@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { checkAuthStatus, getAuthManager, getCurrentProviderType } from './auth/authManager';
 import { handleOAuthLogout, handleEmailLogout, isOAuthProvider } from './utils/logoutUtils';
@@ -21,7 +21,7 @@ import { initializeTokenRefreshService } from './auth/TokenRefreshService';
       }
     }
 import LoginSelector from './components/LoginSelector';
-import EmailLogin from './components/EmailLogin';
+import EmailLogin, { type EmailLoginRef } from './components/EmailLogin';
 import GoogleLogin from './components/oauth/GoogleLogin';
 import KakaoLogin from './components/oauth/KakaoLogin';
 import NaverLogin from './components/oauth/NaverLogin';
@@ -39,6 +39,8 @@ function AppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
+  const [emailLoginStep, setEmailLoginStep] = useState<'email' | 'verification'>('email');
+  const emailLoginRef = useRef<EmailLoginRef>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -234,7 +236,14 @@ function AppContent() {
         {location.pathname !== '/start' && (
           <button 
             className="absolute left-4 bg-transparent border-0 text-2xl cursor-pointer text-gray-600 hover:text-gray-900"
-            onClick={() => navigate('/start')}
+            onClick={() => {
+              // 이메일 로그인 페이지에서 인증번호 입력 단계인 경우 이메일 입력 단계로 이동
+              if (location.pathname === '/login/email' && emailLoginStep === 'verification') {
+                emailLoginRef.current?.resetForm();
+              } else {
+                navigate('/start');
+              }
+            }}
           >
             ←
           </button>
@@ -252,8 +261,8 @@ function AppContent() {
 
       <main className="flex-1 flex flex-col">
         <Routes>
-          <Route path="/start" element={<LoginSelector onBack={handleBackToSplash} />} />
-          <Route path="/login/email" element={<EmailLogin onLoginSuccess={handleLoginSuccess} />} />
+          <Route path="/start" element={<LoginSelector onBack={handleBackToSplash} isAuthenticated={isAuthenticated} />} />
+          <Route path="/login/email" element={<EmailLogin ref={emailLoginRef} onLoginSuccess={handleLoginSuccess} onStepChange={setEmailLoginStep} />} />
           <Route path="/login/google" element={<GoogleLogin />} />
           <Route path="/login/kakao" element={<KakaoLogin />} />
           <Route path="/login/naver" element={<NaverLogin />} />
