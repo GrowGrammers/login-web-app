@@ -85,7 +85,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
 
   // 타이머 시작
   const startTimer = () => {
-    setTimeLeft(300); // 5분으로 리셋
+    setTimeLeft(15); // 5분으로 리셋
     setIsTimerExpired(false);
     
     if (timerRef.current) {
@@ -233,7 +233,18 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
         
         onLoginSuccess();
       } else {
-        setMessage(`❌ ${result.message}`);
+        // EMAIL_EXPIRED 에러 처리 (410 상태 코드)
+        if (result.message?.includes('이메일 인증 시간이 만료되었습니다')) {
+          setMessage('❌ 인증번호가 만료되었습니다. 새로운 인증번호를 받아주세요.');
+          setIsTimerExpired(true);
+          clearTimer();
+          setTimeLeft(0);
+          // 인증번호 입력 필드 초기화
+          setVerificationDigits(['', '', '', '', '', '']);
+          setFormData(prev => ({ ...prev, verifyCode: '' }));
+        } else {
+          setMessage(`❌ ${result.message}`);
+        }
         console.error('❌ 로그인 실패:', result.error);
       }
     } catch (error) {
@@ -325,8 +336,8 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
                 </div>
                 
 
-                  {/* 메시지 표시 - 타이머 만료 시 성공 메시지 숨김 */}
-                {message && !isTimerExpired && (
+                  {/* 메시지 표시 - 타이머 만료 시 성공 메시지만 숨김, 에러 메시지는 계속 표시 */}
+                {message && (!isTimerExpired || message.includes('❌')) && (
                   <div className={`text-right text-sm ${
                     message.includes('✅') 
                       ? 'text-green-600' 
