@@ -25,6 +25,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
   const [isTimerExpired, setIsTimerExpired] = useState(false);
   const [isVerificationRequested, setIsVerificationRequested] = useState(false);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+  const [isBackendExpired, setIsBackendExpired] = useState(false);
   const timerRef = useRef<number | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,7 +86,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
 
   // 타이머 시작
   const startTimer = () => {
-    setTimeLeft(15); // 5분으로 리셋
+    setTimeLeft(300); // 5분으로 리셋
     setIsTimerExpired(false);
     
     if (timerRef.current) {
@@ -171,6 +172,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
     setMessage('이메일을 보내고 있습니다...');
     setIsLoading(true);
     setIsVerificationRequested(false); // 초기화
+    setIsBackendExpired(false); // 백엔드 만료 상태 초기화
     
     // 인증번호 입력 필드 초기화
     setVerificationDigits(['', '', '', '', '', '']);
@@ -236,6 +238,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
         // EMAIL_EXPIRED 에러 처리 (410 상태 코드)
         if (result.message?.includes('이메일 인증 시간이 만료되었습니다')) {
           setMessage('❌ 인증번호가 만료되었습니다. 새로운 인증번호를 받아주세요.');
+          setIsBackendExpired(true);
           setIsTimerExpired(true);
           clearTimer();
           setTimeLeft(0);
@@ -264,6 +267,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
     setTimeLeft(300);
     setIsTimerExpired(false);
     setIsVerificationRequested(false);
+    setIsBackendExpired(false);
   };
 
   // 외부에서 resetForm 함수를 호출할 수 있도록 함
@@ -354,8 +358,8 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
                   </div>
                 )}
 
-                {/* 타이머 만료 안내 */}
-                {isTimerExpired && (
+                {/* 타이머 만료 안내 - 백엔드에서 만료된 경우는 제외 */}
+                {isTimerExpired && !isBackendExpired && (
                   <div className="text-right text-sm text-red-600">
                     <div>5분이 지나 인증번호가 만료되었어요.</div>
                     <div>아래 '인증번호가 안 오나요?'에서 다시 인증번호를 요청해주세요.</div>
