@@ -307,13 +307,13 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
             <div className="text-center flex flex-col w-full">
               <div className="flex flex-col gap-6">
                 
-                <div className="flex justify-between gap-4 mb-4">
+                <div className="flex justify-center gap-4 sm:gap-1 md:gap-3 mb-4 px-2 sm:px-4">
                   {verificationDigits.map((digit, index) => (
                     <input
                       key={index}
                       id={`digit-${index}`}
                       type="text"
-                      className="w-16 h-20 border-2 border-gray-200 rounded-xl text-center text-2xl font-semibold bg-gray-50 transition-all duration-200 focus:outline-none focus:border-gray-900 focus:bg-white focus:shadow-lg disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-500"
+                      className="w-10 h-14 sm:w-8 sm:h-10 md:w-16 md:h-20 border-2 border-gray-200 rounded-xl text-center text-lg sm:text-lg md:text-2xl font-semibold bg-gray-50 transition-all duration-200 focus:outline-none focus:border-gray-900 focus:bg-white focus:shadow-lg disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-500 flex-shrink-0"
                       value={digit}
                       onChange={(e) => handleDigitChange(index, e.target.value)}
                       onKeyDown={(e) => handleDigitKeyDown(index, e)}
