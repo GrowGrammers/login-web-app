@@ -186,7 +186,6 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
         setMessage('✅ 인증번호가 발송되었습니다. 이메일을 확인해주세요.');
         setIsVerificationRequested(true);
         startTimer(); // 성공했을 때만 타이머 시작
-        //console.log('✅ 이메일 인증번호 요청 성공');
       } else {
         setMessage(`❌ ${result.message}`);
         console.error('❌ 이메일 인증번호 요청 실패:', result.error);
@@ -232,7 +231,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
           console.warn('⚠️ 토큰이 저장되지 않았습니다. RealHttpClient에서 처리되었는지 확인하세요.');
         }
         
-        setTimeout(() => onLoginSuccess(), 1000);
+        onLoginSuccess();
       } else {
         setMessage(`❌ ${result.message}`);
         console.error('❌ 로그인 실패:', result.error);

@@ -13,9 +13,6 @@ import { initializeTokenRefreshService } from './auth/TokenRefreshService';
         // 토큰이 저장될 때까지 잠시 대기
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Dashboard 컴포넌트에서 이미 user-info API를 호출하므로 여기서는 중복 호출하지 않음
-        // 단순히 localStorage에 플래그만 설정하여 Dashboard에서 API 호출하도록 함
-        console.log('✅ 이메일 로그인 완료 - Dashboard에서 사용자 정보를 가져올 예정');
       } catch (error) {
         console.error('❌ 이메일 로그인 후처리 중 오류:', error);
       }
@@ -25,6 +22,7 @@ import EmailLogin, { type EmailLoginRef } from './components/EmailLogin';
 import GoogleLogin from './components/oauth/GoogleLogin';
 import KakaoLogin from './components/oauth/KakaoLogin';
 import NaverLogin from './components/oauth/NaverLogin';
+import LoginComplete from './components/LoginComplete';
 import Dashboard from './components/Dashboard';
 import GoogleCallback from './components/oauth/GoogleCallback';
 import KakaoCallback from './components/oauth/KakaoCallback';
@@ -123,8 +121,10 @@ function AppContent() {
         // 인증된 상태이면 토큰 갱신 서비스 시작
         initializeTokenRefreshService();
         setShowSplash(false);
-        // 인증된 상태이면 대시보드로 리다이렉트
-        navigate('/dashboard');
+        // 이미 로그인 완료 페이지나 대시보드에 있으면 리다이렉트하지 않음
+        if (location.pathname !== '/login/complete' && location.pathname !== '/dashboard') {
+          navigate('/login/complete');
+        }
       } else {
         // 인증되지 않은 상태이면 스플래시 화면을 숨김 (로그인 페이지 접근 허용)
         setShowSplash(false);
@@ -161,7 +161,7 @@ function AppContent() {
       await fetchUserInfoAfterEmailLogin();
     }
     
-    navigate('/dashboard');
+    navigate('/login/complete');
     
     // 잠시 후 토큰 상태를 확인하여 UI 업데이트
     setTimeout(async () => {
@@ -228,6 +228,29 @@ function AppContent() {
     );
   }
 
+  // 보호된 라우트인지 확인
+  const isProtectedRoute = (path: string) => {
+    return path === '/login/complete' || path === '/login/connect';
+  };
+
+  // 보호된 라우트에 접근 시 인증되지 않은 경우 리다이렉트
+  if (isProtectedRoute(location.pathname) && !isAuthenticated) {
+    return (
+      <div className="min-h-screen flex flex-col max-w-xl mx-auto bg-white border-l border-r border-gray-200 shadow-xl">
+        <div className="flex flex-col items-center justify-center p-12 text-center">
+          <h3 className="text-gray-900 mb-4 text-xl font-semibold">로그인이 필요합니다</h3>
+          <p className="text-gray-600 mb-6">이 페이지에 접근하려면 먼저 로그인해주세요.</p>
+          <button 
+            className="px-6 py-3 bg-gray-900 text-white rounded-xl text-base font-semibold hover:bg-gray-700 hover:-translate-y-0.5 transition-all duration-200"
+            onClick={() => navigate('/start')}
+          >
+            로그인하러 가기
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col max-w-xl mx-auto bg-white border-l border-r border-gray-200 shadow-xl">
       {/* 인증 상태 헤더 */}
@@ -266,6 +289,7 @@ function AppContent() {
           <Route path="/login/google" element={<GoogleLogin />} />
           <Route path="/login/kakao" element={<KakaoLogin />} />
           <Route path="/login/naver" element={<NaverLogin />} />
+          <Route path="/login/complete" element={<LoginComplete />} />
           <Route path="/dashboard" element={<Dashboard onLogout={handleLogout} />} />
           <Route path="/auth/google/callback" element={<GoogleCallback />} />
           <Route path="/auth/kakao/callback" element={<KakaoCallback />} />

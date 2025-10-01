@@ -59,7 +59,7 @@ export async function handleOAuthProviderCallback(
       // RealHttpClient에서 이미 사용자 정보를 가져오므로 중복 호출 제거
       // await fetchUserInfoAfterLogin(provider);
       
-      navigate('/dashboard');
+      navigate('/login/complete');
     } else {
       console.error(`${provider} 로그인 실패:`, result.message);
     }
