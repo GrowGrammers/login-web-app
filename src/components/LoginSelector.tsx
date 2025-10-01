@@ -80,7 +80,7 @@ const LoginSelector = ({ onBack, isAuthenticated }: LoginSelectorProps) => {
           <h3 className="text-base font-medium">이메일로 계속하기</h3>
         </button>
         
-        <div className="flex gap-4 mb-4">
+        <div className="flex gap-4 mb-2">
           <button 
             className="flex-1 h-16 border border-gray-200 rounded-2xl bg-white cursor-pointer transition-all duration-300 flex items-center justify-center shadow-sm hover:-translate-y-1 hover:shadow-md"
             onClick={() => handleMethodSelect('kakao')}
@@ -104,16 +104,16 @@ const LoginSelector = ({ onBack, isAuthenticated }: LoginSelectorProps) => {
         </div>
         
         <p 
-          className="text-right text-gray-600 text-sm mt-2 mb-2 cursor-pointer hover:text-gray-800 transition-colors duration-200"
+          className="text-right text-gray-600 text-sm mb-8 cursor-pointer hover:text-gray-800 transition-colors duration-200"
           onClick={() => alert('계정 찾기 추후 구현 예정')}
         >
           계정이 기억나지 않으세요?
         </p>
         
-        <p className="text-center text-gray-500 text-xs leading-tight mb-0">
+        <p className="text-center text-gray-500 text-xs leading-tight mt-4 mb-0">
           계속하면 [서비스명]의 <strong 
             className="text-gray-600 underline cursor-pointer hover:text-gray-800 transition-colors duration-200"
-            onClick={() => alert('이용 약관 추후 구현 예정')}
+            onClick={() => window.open('https://amazing-jelly-42b.notion.site/27fbb18df73c80aabc58dbf959588677?source=copy_link', '_blank')}
           >이용 약관</strong>에 동의하는 것 입니다.
         </p>
         </div>
