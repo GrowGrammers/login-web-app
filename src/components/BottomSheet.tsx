@@ -19,7 +19,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ isOpen, onClose, title, child
       />
       
       {/* Bottom Sheet Content */}
-      <div className="relative w-full max-w-xl bg-white rounded-t-3xl p-6 max-h-[80vh] overflow-y-auto mx-4">
+      <div className="relative w-full max-w-xl bg-white rounded-t-3xl p-4 sm:p-6 max-h-[80vh] overflow-y-auto mx-2 sm:mx-4">
         {/* Close Button */}
         <button
           onClick={onClose}
