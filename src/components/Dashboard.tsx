@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getAuthManager, getCurrentProviderType } from '../auth/authManager';
 import { getTokenRefreshService } from '../auth/TokenRefreshService';
 import { isJWTExpired, getExpirationFromJWT } from '../utils/jwtUtils';
+import { useAuthStatus } from '../hooks';
 
 // HttpOnly 쿠키는 JavaScript에서 접근할 수 없으므로 쿠키 읽기 함수는 사용하지 않음
 
@@ -24,56 +25,16 @@ interface TokenInfo {
 }
 
 const Dashboard = ({ onLogout }: DashboardProps) => {
+  const { timeUntilExpiry } = useAuthStatus();
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [timeUntilExpiry, setTimeUntilExpiry] = useState<number | null>(null);
 
   useEffect(() => {
     loadUserData();
     
-    // 토큰 만료 시간 추적 타이머
-    const interval = setInterval(async () => {
-      const authManager = getAuthManager();
-      const tokenResult = await authManager.getToken();
-      
-      if (tokenResult.success && tokenResult.data?.accessToken) {
-        // JWT에서 직접 남은 시간 계산
-        const { getTimeUntilExpiryFromJWT } = await import('../utils/jwtUtils');
-        const remainingFromJWT = getTimeUntilExpiryFromJWT(tokenResult.data.accessToken);
-        if (remainingFromJWT !== null) {
-          setTimeUntilExpiry(remainingFromJWT);
-        } else {
-          // JWT 파싱 실패시 폴백
-          const tokenRefreshService = getTokenRefreshService();
-          const remaining = await tokenRefreshService.getTimeUntilExpiry();
-          setTimeUntilExpiry(remaining);
-        }
-      }
-    }, 30000); // 30초마다 확인
-    
-    // 즉시 한 번 실행
-    (async () => {
-      const authManager = getAuthManager();
-      const tokenResult = await authManager.getToken();
-      
-      if (tokenResult.success && tokenResult.data?.accessToken) {
-        // JWT에서 직접 남은 시간 계산
-        const { getTimeUntilExpiryFromJWT } = await import('../utils/jwtUtils');
-        const remainingFromJWT = getTimeUntilExpiryFromJWT(tokenResult.data.accessToken);
-        if (remainingFromJWT !== null) {
-          setTimeUntilExpiry(remainingFromJWT);
-        } else {
-          // JWT 파싱 실패시 폴백
-          const tokenRefreshService = getTokenRefreshService();
-          const remaining = await tokenRefreshService.getTimeUntilExpiry();
-          setTimeUntilExpiry(remaining);
-        }
-      }
-    })();
-    
-    return () => clearInterval(interval);
+    // 토큰 만료 시간은 useAuthStatus 훅에서 관리
   }, []);
 
   const loadUserData = async () => {
@@ -87,20 +48,9 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       if (tokenResult.success && tokenResult.data) {
         setTokenInfo(tokenResult.data);
         
-        // JWT에서 직접 남은 시간 계산하여 즉시 업데이트
-        const { getTimeUntilExpiryFromJWT } = await import('../utils/jwtUtils');
-        const remainingFromJWT = getTimeUntilExpiryFromJWT(tokenResult.data.accessToken);
-        if (remainingFromJWT !== null) {
-          setTimeUntilExpiry(remainingFromJWT);
-        } else {
-          // JWT 파싱 실패시 폴백
-          const tokenRefreshService = getTokenRefreshService();
-          const remaining = await tokenRefreshService.getTimeUntilExpiry();
-          setTimeUntilExpiry(remaining);
-        }
+        // 토큰 만료 시간은 useAuthStatus 훅에서 자동 관리됨
       } else {
         setTokenInfo(null);
-        setTimeUntilExpiry(null);
       }
 
       // 사용자 정보 가져오기 (localStorage에서 먼저 확인)
@@ -208,14 +158,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
           if (tokenResult.success && tokenResult.data) {
             setTokenInfo(tokenResult.data);
             
-            // JWT에서 직접 남은 시간 계산하여 즉시 업데이트
-            const { getTimeUntilExpiryFromJWT } = await import('../utils/jwtUtils');
-            const remainingFromJWT = getTimeUntilExpiryFromJWT(tokenResult.data.accessToken);
-            
-            if (remainingFromJWT !== null) {
-              setTimeUntilExpiry(remainingFromJWT);
-              break; // 성공하면 루프 종료
-            }
+            // 토큰 만료 시간은 useAuthStatus 훅에서 자동 관리됨
+            break; // 성공하면 루프 종료
           }
           
           retryCount++;

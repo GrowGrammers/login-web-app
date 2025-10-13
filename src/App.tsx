@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { checkAuthStatus, getAuthManager, getCurrentProviderType } from './auth/authManager';
+import { getAuthManager, getCurrentProviderType } from './auth/authManager';
 import { handleOAuthLogout, handleEmailLogout, isOAuthProvider } from './utils/logoutUtils';
 import { processOAuthProvider, isOAuthCallbackPath, cleanupOAuthProgress } from './utils/oauthCallbackUtils';
 import { initializeTokenRefreshService } from './auth/TokenRefreshService';
 import { AuthStatusBadge, BackButton, PageContainer } from './components/ui';
+import { useAuthStatus } from './hooks';
 
     /**
      * 이메일 로그인 후 사용자 정보 가져오기
@@ -35,15 +36,14 @@ const globalOAuthProcessing = { value: false };
 
 // Main App 컴포넌트 (Router 내부)
 function AppContent() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isAuthenticated, isLoading, refreshAuthStatus } = useAuthStatus();
   const [showSplash, setShowSplash] = useState(true);
   const [emailLoginStep, setEmailLoginStep] = useState<'email' | 'verification'>('email');
   const emailLoginRef = useRef<EmailLoginRef>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 초기 인증 상태 확인 및 OAuth 콜백 처리
+  // OAuth 콜백 처리
   useEffect(() => {
     let hasRun = false;
     let isProcessing = false; // OAuth 처리 중 플래그 추가
@@ -57,7 +57,6 @@ function AppContent() {
       isProcessing = true;
       
       try {
-        await checkInitialAuthStatus();
         await handleOAuthCallback();
       } finally {
         isProcessing = false;
@@ -102,7 +101,7 @@ function AppContent() {
           provider,
           authCode,
           setShowSplash,
-          setIsAuthenticated,
+          refreshAuthStatus,
           initializeTokenRefreshService,
           navigate,
           globalOAuthProcessing
@@ -112,13 +111,10 @@ function AppContent() {
     }
   };
 
-  const checkInitialAuthStatus = async () => {
-    try {
-      setIsLoading(true);
-      const status = await checkAuthStatus();
-      setIsAuthenticated(status.isAuthenticated);
-      
-      if (status.isAuthenticated) {
+  // 인증 상태가 변경될 때 처리
+  useEffect(() => {
+    if (!isLoading) {
+      if (isAuthenticated) {
         // 인증된 상태이면 토큰 갱신 서비스 시작
         initializeTokenRefreshService();
         setShowSplash(false);
@@ -130,15 +126,8 @@ function AppContent() {
         // 인증되지 않은 상태이면 스플래시 화면을 숨김 (로그인 페이지 접근 허용)
         setShowSplash(false);
       }
-    } catch (error) {
-      console.error('❌ 초기 인증 상태 확인 실패:', error);
-      setIsAuthenticated(false);
-      // 에러 발생 시에도 스플래시 화면을 숨김 (로그인 페이지 접근 허용)
-      setShowSplash(false);
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [isAuthenticated, isLoading, location.pathname, navigate]);
 
   const handleStartApp = () => {
     setShowSplash(false);
@@ -152,7 +141,7 @@ function AppContent() {
 
   const handleLoginSuccess = async () => {
     // 로그인 성공, 인증 상태 업데이트
-    setIsAuthenticated(true);
+    await refreshAuthStatus();
     // 로그인 성공 시 토큰 갱신 서비스 시작
     initializeTokenRefreshService();
     
@@ -166,7 +155,7 @@ function AppContent() {
     
     // 잠시 후 토큰 상태를 확인하여 UI 업데이트
     setTimeout(async () => {
-      await checkInitialAuthStatus();
+      await refreshAuthStatus();
     }, 500);
   };
 
@@ -186,7 +175,7 @@ function AppContent() {
       }
       
       if (result.success) {
-        setIsAuthenticated(false);
+        await refreshAuthStatus();
         setShowSplash(true);
         alert('✅ 로그아웃되었습니다.');
         navigate('/');
