@@ -4,6 +4,7 @@ import { checkAuthStatus, getAuthManager, getCurrentProviderType } from './auth/
 import { handleOAuthLogout, handleEmailLogout, isOAuthProvider } from './utils/logoutUtils';
 import { processOAuthProvider, isOAuthCallbackPath, cleanupOAuthProgress } from './utils/oauthCallbackUtils';
 import { initializeTokenRefreshService } from './auth/TokenRefreshService';
+import { AuthStatusBadge, BackButton, PageContainer } from './components/ui';
 
     /**
      * 이메일 로그인 후 사용자 정보 가져오기
@@ -252,13 +253,13 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col max-w-xl mx-auto bg-white border-l border-r border-gray-200 shadow-xl">
+    <PageContainer>
       {/* 인증 상태 헤더 */}
       <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-center justify-center relative">
         {/* 뒤로가기 버튼 - 시작하기 페이지가 아닐 때만 표시 */}
         {location.pathname !== '/start' && (
-          <button 
-            className="absolute left-4 bg-transparent border-0 text-2xl cursor-pointer text-gray-600 hover:text-gray-900"
+          <BackButton 
+            className="absolute left-4"
             onClick={() => {
               // 이메일 로그인 페이지에서 인증번호 입력 단계인 경우 이메일 입력 단계로 이동
               if (location.pathname === '/login/email' && emailLoginStep === 'verification') {
@@ -267,19 +268,11 @@ function AppContent() {
                 navigate('/start');
               }
             }}
-          >
-            ←
-          </button>
+          />
         )}
         
         {/* 인증 상태 - 항상 중앙 정렬 */}
-        <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-medium text-sm ${
-          isAuthenticated 
-            ? 'bg-green-100 text-green-800' 
-            : 'bg-red-100 text-red-800'
-        }`}>
-          {isAuthenticated ? '🟢 인증됨' : '🔴 미인증'}
-        </span>
+        <AuthStatusBadge isAuthenticated={isAuthenticated} />
       </div>
 
       <main className="flex-1 flex flex-col">
@@ -296,7 +289,7 @@ function AppContent() {
           <Route path="/auth/naver/callback" element={<NaverCallback />} />
         </Routes>
       </main>
-    </div>
+    </PageContainer>
   );
 }
 

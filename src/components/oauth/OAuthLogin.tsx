@@ -3,6 +3,7 @@ import { resetAuthManager } from '../../auth/authManager';
 import { generateRandomString, generateCodeVerifier, generateCodeChallenge } from '../../utils/pkceUtils';
 import type { OAuthProvider } from './providers/index';
 import { getOAuthConfig } from './providers/index';
+import { MessageAlert } from '../ui';
 
 interface OAuthLoginProps {
   provider: OAuthProvider;
@@ -85,15 +86,7 @@ const OAuthLogin = ({ provider }: OAuthLoginProps) => {
         <div className="flex-1 flex flex-col gap-4">
           <div className="flex flex-col w-full">
             {/* 메시지 표시 */}
-            {message && (
-              <div className={`p-4 rounded-xl mb-4 font-medium text-sm ${
-                message.includes('✅') 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-red-100 text-red-800'
-              }`}>
-                {message}
-              </div>
-            )}
+            <MessageAlert message={message} />
 
             <button
               onClick={handleOAuthLogin}
