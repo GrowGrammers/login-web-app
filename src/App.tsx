@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { checkAuthStatus, getAuthManager, getCurrentProviderType } from './auth/authManager';
+import { getAuthManager, getCurrentProviderType } from './auth/authManager';
 import { handleOAuthLogout, handleEmailLogout, isOAuthProvider } from './utils/logoutUtils';
 import { processOAuthProvider, isOAuthCallbackPath, cleanupOAuthProgress } from './utils/oauthCallbackUtils';
 import { initializeTokenRefreshService } from './auth/TokenRefreshService';
+import { AuthStatusBadge, BackButton, PageContainer } from './components/ui';
+import { useAuthStatus } from './hooks';
 
     /**
      * 이메일 로그인 후 사용자 정보 가져오기
@@ -17,16 +19,19 @@ import { initializeTokenRefreshService } from './auth/TokenRefreshService';
         console.error('❌ 이메일 로그인 후처리 중 오류:', error);
       }
     }
-import LoginSelector from './components/LoginSelector';
-import EmailLogin, { type EmailLoginRef } from './components/EmailLogin';
-import GoogleLogin from './components/oauth/GoogleLogin';
-import KakaoLogin from './components/oauth/KakaoLogin';
-import NaverLogin from './components/oauth/NaverLogin';
-import LoginComplete from './components/LoginComplete';
-import Dashboard from './components/Dashboard';
-import GoogleCallback from './components/oauth/GoogleCallback';
-import KakaoCallback from './components/oauth/KakaoCallback';
-import NaverCallback from './components/oauth/NaverCallback';
+import { 
+  LoginSelector,
+  EmailLogin,
+  GoogleLogin,
+  KakaoLogin,
+  NaverLogin,
+  LoginComplete,
+  GoogleCallback,
+  KakaoCallback,
+  NaverCallback
+} from './components/auth';
+import Dashboard from './components/dashboard/Dashboard';
+import type { EmailLoginRef } from './components/auth/EmailLogin';
 import './App.css';
 
 // 전역 OAuth 처리 상태 (React Strict Mode 대응)
@@ -34,15 +39,14 @@ const globalOAuthProcessing = { value: false };
 
 // Main App 컴포넌트 (Router 내부)
 function AppContent() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isAuthenticated, isLoading, refreshAuthStatus } = useAuthStatus();
   const [showSplash, setShowSplash] = useState(true);
   const [emailLoginStep, setEmailLoginStep] = useState<'email' | 'verification'>('email');
   const emailLoginRef = useRef<EmailLoginRef>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 초기 인증 상태 확인 및 OAuth 콜백 처리
+  // OAuth 콜백 처리
   useEffect(() => {
     let hasRun = false;
     let isProcessing = false; // OAuth 처리 중 플래그 추가
@@ -56,7 +60,6 @@ function AppContent() {
       isProcessing = true;
       
       try {
-        await checkInitialAuthStatus();
         await handleOAuthCallback();
       } finally {
         isProcessing = false;
@@ -97,27 +100,35 @@ function AppContent() {
     
     for (const { provider, authCode } of oauthProviders) {
       if (authCode) {
-        await processOAuthProvider(
-          provider,
-          authCode,
-          setShowSplash,
-          setIsAuthenticated,
-          initializeTokenRefreshService,
-          navigate,
-          globalOAuthProcessing
-        );
+        try {
+          await processOAuthProvider(
+            provider,
+            authCode,
+            setShowSplash,
+            refreshAuthStatus,
+            initializeTokenRefreshService,
+            navigate,
+            globalOAuthProcessing
+          );
+        } catch (error) {
+          console.error(`${provider} OAuth 처리 중 예상치 못한 오류:`, error);
+          
+          // 사용자에게 오류 알림 표시
+          const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+          alert(`❌ ${provider} 로그인 처리 중 오류 발생\n\n${errorMessage}\n\n다시 시도해주세요.`);
+          
+          // 로그인 페이지로 리다이렉트
+          navigate('/start');
+        }
         break; // 한 번에 하나의 제공자만 처리
       }
     }
   };
 
-  const checkInitialAuthStatus = async () => {
-    try {
-      setIsLoading(true);
-      const status = await checkAuthStatus();
-      setIsAuthenticated(status.isAuthenticated);
-      
-      if (status.isAuthenticated) {
+  // 인증 상태가 변경될 때 처리
+  useEffect(() => {
+    if (!isLoading) {
+      if (isAuthenticated) {
         // 인증된 상태이면 토큰 갱신 서비스 시작
         initializeTokenRefreshService();
         setShowSplash(false);
@@ -129,15 +140,8 @@ function AppContent() {
         // 인증되지 않은 상태이면 스플래시 화면을 숨김 (로그인 페이지 접근 허용)
         setShowSplash(false);
       }
-    } catch (error) {
-      console.error('❌ 초기 인증 상태 확인 실패:', error);
-      setIsAuthenticated(false);
-      // 에러 발생 시에도 스플래시 화면을 숨김 (로그인 페이지 접근 허용)
-      setShowSplash(false);
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [isAuthenticated, isLoading, location.pathname, navigate]);
 
   const handleStartApp = () => {
     setShowSplash(false);
@@ -151,7 +155,7 @@ function AppContent() {
 
   const handleLoginSuccess = async () => {
     // 로그인 성공, 인증 상태 업데이트
-    setIsAuthenticated(true);
+    await refreshAuthStatus();
     // 로그인 성공 시 토큰 갱신 서비스 시작
     initializeTokenRefreshService();
     
@@ -165,7 +169,7 @@ function AppContent() {
     
     // 잠시 후 토큰 상태를 확인하여 UI 업데이트
     setTimeout(async () => {
-      await checkInitialAuthStatus();
+      await refreshAuthStatus();
     }, 500);
   };
 
@@ -185,7 +189,7 @@ function AppContent() {
       }
       
       if (result.success) {
-        setIsAuthenticated(false);
+        await refreshAuthStatus();
         setShowSplash(true);
         alert('✅ 로그아웃되었습니다.');
         navigate('/');
@@ -252,13 +256,13 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col max-w-xl mx-auto bg-white border-l border-r border-gray-200 shadow-xl">
+    <PageContainer>
       {/* 인증 상태 헤더 */}
       <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-center justify-center relative">
         {/* 뒤로가기 버튼 - 시작하기 페이지가 아닐 때만 표시 */}
         {location.pathname !== '/start' && (
-          <button 
-            className="absolute left-4 bg-transparent border-0 text-2xl cursor-pointer text-gray-600 hover:text-gray-900"
+          <BackButton 
+            className="absolute left-4"
             onClick={() => {
               // 이메일 로그인 페이지에서 인증번호 입력 단계인 경우 이메일 입력 단계로 이동
               if (location.pathname === '/login/email' && emailLoginStep === 'verification') {
@@ -267,19 +271,11 @@ function AppContent() {
                 navigate('/start');
               }
             }}
-          >
-            ←
-          </button>
+          />
         )}
         
         {/* 인증 상태 - 항상 중앙 정렬 */}
-        <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-medium text-sm ${
-          isAuthenticated 
-            ? 'bg-green-100 text-green-800' 
-            : 'bg-red-100 text-red-800'
-        }`}>
-          {isAuthenticated ? '🟢 인증됨' : '🔴 미인증'}
-        </span>
+        <AuthStatusBadge isAuthenticated={isAuthenticated} />
       </div>
 
       <main className="flex-1 flex flex-col">
@@ -296,7 +292,7 @@ function AppContent() {
           <Route path="/auth/naver/callback" element={<NaverCallback />} />
         </Routes>
       </main>
-    </div>
+    </PageContainer>
   );
 }
 

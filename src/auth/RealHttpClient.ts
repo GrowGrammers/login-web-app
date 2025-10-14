@@ -156,14 +156,35 @@ export class RealHttpClient implements HttpClient {
     } catch (error) {
       console.error('❌ HTTP 요청 실패:', error);
       
+      // 네트워크 오류 타입별 사용자 친화적 메시지 제공
+      let userMessage = '알 수 없는 오류가 발생했습니다.';
+      let errorType = 'UNKNOWN_ERROR';
+      
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        // 네트워크 연결 실패 (서버가 꺼져있거나 네트워크 문제)
+        userMessage = '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.';
+        errorType = 'CONNECTION_REFUSED';
+      } else if (error instanceof Error && error.name === 'AbortError') {
+        // 타임아웃 오류
+        userMessage = '요청 시간이 초과되었습니다. 다시 시도해주세요.';
+        errorType = 'TIMEOUT';
+      } else if (error instanceof Error) {
+        userMessage = error.message;
+        errorType = 'NETWORK_ERROR';
+      }
+      
       // 네트워크/타임아웃/규칙 위반 등
       return {
         ok: false,
         status: 0,
         statusText: 'Error',
         headers: {},
-        json: async () => ({ error: error instanceof Error ? error.message : '알 수 없는 오류' }),
-        text: async () => (error instanceof Error ? error.message : '알 수 없는 오류')
+        json: async () => ({ 
+          error: userMessage,
+          errorType: errorType,
+          originalError: error instanceof Error ? error.message : '알 수 없는 오류'
+        }),
+        text: async () => userMessage
       };
     }
   }

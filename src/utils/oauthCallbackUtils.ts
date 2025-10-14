@@ -62,13 +62,28 @@ export async function handleOAuthProviderCallback(
       navigate('/login/complete');
     } else {
       console.error(`${provider} 로그인 실패:`, result.message);
+      
+      // 사용자에게 오류 알림 표시
+      const errorMessage = result.message || '로그인에 실패했습니다.';
+      alert(`❌ ${provider} 로그인 실패\n\n${errorMessage}\n\n다시 시도해주세요.`);
+      
+      // 로그인 페이지로 리다이렉트
+      navigate('/start');
     }
     
     return result;
     
   } catch (error) {
     console.error(`${provider} OAuth 콜백 처리 중 오류:`, error);
-    return { success: false, message: error instanceof Error ? error.message : '알 수 없는 오류' };
+    
+    // 사용자에게 오류 알림 표시
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+    alert(`❌ ${provider} 로그인 중 오류 발생\n\n${errorMessage}\n\n다시 시도해주세요.`);
+    
+    // 로그인 페이지로 리다이렉트
+    navigate('/start');
+    
+    return { success: false, message: errorMessage };
   } finally {
     // 사용한 인증 코드 및 PKCE 파라미터 삭제
     localStorage.removeItem(`${provider}_auth_code`);
@@ -114,6 +129,14 @@ export async function processOAuthProvider(
     );
   } else {
     console.warn(`${provider} authCode는 있지만 codeVerifier가 없습니다.`);
+    
+    // 사용자에게 오류 알림 표시
+    alert(`❌ ${provider} 로그인 오류\n\n인증 정보가 올바르지 않습니다.\n\n다시 시도해주세요.`);
+    
+    // 로그인 페이지로 리다이렉트
+    navigate('/start');
+    
+    // 관련 데이터 정리
     localStorage.removeItem(`${provider}_auth_code`);
   }
 }
