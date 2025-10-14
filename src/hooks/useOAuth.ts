@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { resetAuthManager } from '../auth/authManager';
 import { generateRandomString, generateCodeVerifier, generateCodeChallenge } from '../utils/pkceUtils';
-import type { OAuthProvider } from '../components/oauth/providers/index';
-import { getOAuthConfig } from '../components/oauth/providers/index';
+import type { OAuthProvider } from '../components/auth/oauth/providers/index';
+import { getOAuthConfig } from '../components/auth/oauth/providers/index';
 
 interface UseOAuthReturn {
   isLoading: boolean;

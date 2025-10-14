@@ -19,16 +19,19 @@ import { useAuthStatus } from './hooks';
         console.error('❌ 이메일 로그인 후처리 중 오류:', error);
       }
     }
-import LoginSelector from './components/LoginSelector';
-import EmailLogin, { type EmailLoginRef } from './components/EmailLogin';
-import GoogleLogin from './components/oauth/GoogleLogin';
-import KakaoLogin from './components/oauth/KakaoLogin';
-import NaverLogin from './components/oauth/NaverLogin';
-import LoginComplete from './components/LoginComplete';
-import Dashboard from './components/Dashboard';
-import GoogleCallback from './components/oauth/GoogleCallback';
-import KakaoCallback from './components/oauth/KakaoCallback';
-import NaverCallback from './components/oauth/NaverCallback';
+import { 
+  LoginSelector,
+  EmailLogin,
+  GoogleLogin,
+  KakaoLogin,
+  NaverLogin,
+  LoginComplete,
+  GoogleCallback,
+  KakaoCallback,
+  NaverCallback
+} from './components/auth';
+import Dashboard from './components/dashboard/Dashboard';
+import type { EmailLoginRef } from './components/auth/EmailLogin';
 import './App.css';
 
 // 전역 OAuth 처리 상태 (React Strict Mode 대응)
@@ -97,15 +100,26 @@ function AppContent() {
     
     for (const { provider, authCode } of oauthProviders) {
       if (authCode) {
-        await processOAuthProvider(
-          provider,
-          authCode,
-          setShowSplash,
-          refreshAuthStatus,
-          initializeTokenRefreshService,
-          navigate,
-          globalOAuthProcessing
-        );
+        try {
+          await processOAuthProvider(
+            provider,
+            authCode,
+            setShowSplash,
+            refreshAuthStatus,
+            initializeTokenRefreshService,
+            navigate,
+            globalOAuthProcessing
+          );
+        } catch (error) {
+          console.error(`${provider} OAuth 처리 중 예상치 못한 오류:`, error);
+          
+          // 사용자에게 오류 알림 표시
+          const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+          alert(`❌ ${provider} 로그인 처리 중 오류 발생\n\n${errorMessage}\n\n다시 시도해주세요.`);
+          
+          // 로그인 페이지로 리다이렉트
+          navigate('/start');
+        }
         break; // 한 번에 하나의 제공자만 처리
       }
     }

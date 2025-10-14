@@ -1,7 +1,7 @@
 import type { OAuthProvider } from './providers/index';
 import { getOAuthConfig } from './providers/index';
-import { MessageAlert } from '../ui';
-import { useOAuth } from '../../hooks';
+import { MessageAlert } from '../../ui';
+import { useOAuth } from '../../../hooks';
 
 interface OAuthLoginProps {
   provider: OAuthProvider;

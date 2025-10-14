@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { AuthStatusBadge } from './ui';
+import { AuthStatusBadge } from '../ui';
 
 interface LoginSelectorProps {
   onBack?: () => void;

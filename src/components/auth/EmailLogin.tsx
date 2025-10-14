@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { getAuthManager, resetAuthManager } from '../auth/authManager';
-import BottomSheet from './BottomSheet';
-import { validateEmailWithAlert } from '../utils/emailValidationUtils';
+import { getAuthManager, resetAuthManager } from '../../auth/authManager';
+import { BottomSheet } from '../layout';
+import { validateEmailWithAlert } from '../../utils/emailValidationUtils';
+import { INPUT_STYLES, BUTTON_STYLES } from '../../styles';
 
 interface EmailLoginProps {
   onLoginSuccess: () => void;
@@ -224,7 +225,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // 토큰이 제대로 저장되었는지 확인
-        const { WebTokenStore } = await import('../auth/WebTokenStore');
+        const { WebTokenStore } = await import('../../auth/WebTokenStore');
         const tokenStore = new WebTokenStore();
         // RealHttpClient에서 이미 토큰을 저장했으므로 추가 처리 불필요
         // 토큰이 제대로 저장되었는지 확인만 함
@@ -305,14 +306,14 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
                 value={formData.email}
                 onChange={handleInputChange}
                 disabled={isLoading}
-                className="w-full p-4 border border-gray-200 rounded-xl text-base mb-12 bg-gray-50 focus:outline-none focus:border-gray-900 focus:bg-white transition-colors duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-500"
+                className={`${INPUT_STYLES.default} mb-12`}
               />
               
 
               <button
                 onClick={requestEmailVerification}
                 disabled={isLoading || !formData.email}
-                className="w-full p-4 bg-gray-900 text-white rounded-xl text-base font-semibold hover:bg-gray-700 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className={BUTTON_STYLES.large}
               >
                 {isLoading ? '인증번호 발송 중...' : '인증번호 받기'}
               </button>
@@ -327,7 +328,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
                       key={index}
                       id={`digit-${index}`}
                       type="text"
-                      className="w-10 h-14 sm:w-14 sm:h-16 sm:text-xl md:w-16 md:h-20 border-2 border-gray-200 rounded-xl text-center text-lg sm:text-lg md:text-2xl font-semibold bg-gray-50 transition-all duration-200 focus:outline-none focus:border-gray-900 focus:bg-white focus:shadow-lg disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-500 flex-shrink-0 "
+                      className={INPUT_STYLES.verification}
                       value={digit}
                       onChange={(e) => handleDigitChange(index, e.target.value)}
                       onKeyDown={(e) => handleDigitKeyDown(index, e)}
@@ -380,7 +381,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
                   <button
                     onClick={requestEmailVerification}
                     disabled={isLoading}
-                    className="w-full p-4 bg-orange-500 text-white rounded-xl text-base font-semibold hover:bg-orange-600 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    className={BUTTON_STYLES.warning}
                   >
                     인증번호 다시 받기
                   </button>
@@ -388,7 +389,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
                   <button
                     onClick={handleEmailLogin}
                     disabled={isLoading || formData.verifyCode.length !== 6}
-                    className="w-full p-4 bg-gray-900 text-white rounded-xl text-base font-semibold hover:bg-gray-700 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    className={BUTTON_STYLES.large}
                   >
                     계속하기
                   </button>
@@ -437,7 +438,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
         <button
           onClick={handleResendVerification}
           disabled={isLoading}
-          className="w-full p-4 bg-gray-900 text-white rounded-xl text-base font-semibold hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className={BUTTON_STYLES.large}
         >
           {isLoading ? '인증번호 발송 중...' : '인증번호 다시 받기'}
         </button>

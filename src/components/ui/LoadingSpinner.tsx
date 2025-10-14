@@ -1,4 +1,5 @@
 import React from 'react';
+import { LOADING_STYLES } from '../../styles';
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
@@ -14,12 +15,12 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   const getSizeClasses = () => {
     switch (size) {
       case 'sm':
-        return 'w-4 h-4';
+        return LOADING_STYLES.small;
       case 'lg':
-        return 'w-8 h-8';
+        return LOADING_STYLES.large;
       case 'md':
       default:
-        return 'w-6 h-6';
+        return LOADING_STYLES.default;
     }
   };
 

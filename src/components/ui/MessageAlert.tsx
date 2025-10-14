@@ -1,4 +1,5 @@
 import React from 'react';
+import { MESSAGE_STYLES } from '../../styles';
 
 interface MessageAlertProps {
   message: string;
@@ -13,15 +14,15 @@ const MessageAlert: React.FC<MessageAlertProps> = ({
 }) => {
   if (!message) return null;
 
-  const getAlertStyles = (alertType: 'success' | 'error' | 'info') => {
-    switch (alertType) {
+  const getMessageStyle = () => {
+    switch (finalType) {
       case 'success':
-        return 'bg-green-100 text-green-800';
+        return MESSAGE_STYLES.success;
       case 'error':
-        return 'bg-red-100 text-red-800';
+        return MESSAGE_STYLES.error;
       case 'info':
       default:
-        return 'bg-blue-100 text-blue-800';
+        return MESSAGE_STYLES.info;
     }
   };
 
@@ -35,7 +36,7 @@ const MessageAlert: React.FC<MessageAlertProps> = ({
   const finalType = type === 'info' ? getAutoType(message) : type;
 
   return (
-    <div className={`p-4 rounded-xl mb-4 font-medium text-sm ${getAlertStyles(finalType)} ${className}`}>
+    <div className={`${getMessageStyle()} ${className}`}>
       {message}
     </div>
   );
