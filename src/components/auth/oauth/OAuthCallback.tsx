@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import type { OAuthProvider } from './providers/index';
 import { getOAuthConfig } from './providers/index';
 
@@ -9,6 +9,7 @@ interface OAuthCallbackProps {
 
 const OAuthCallback = ({ provider }: OAuthCallbackProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const config = getOAuthConfig(provider);
 
   useEffect(() => {
@@ -33,12 +34,14 @@ const OAuthCallback = ({ provider }: OAuthCallbackProps) => {
         // URL 파라미터를 search와 hash 모두에서 확인
         let urlParams: URLSearchParams;
         let code: string | null = null;
+        let state: string | null = null;
         let error: string | null = null;
 
         // search 파라미터 먼저 확인
         if (window.location.search) {
           urlParams = new URLSearchParams(window.location.search);
           code = urlParams.get('code');
+          state = urlParams.get('state');
           error = urlParams.get('error');
         }
 
@@ -47,10 +50,22 @@ const OAuthCallback = ({ provider }: OAuthCallbackProps) => {
           const hashParams = window.location.hash.substring(1);
           urlParams = new URLSearchParams(hashParams);
           code = urlParams.get('code');
+          state = urlParams.get('state');
           error = urlParams.get('error');
         }
         
         if (code) {
+          // 🔒 보안: State 파라미터 검증 (CSRF 방지)
+          const savedState = localStorage.getItem(config.storageKeys.state);
+          if (state !== savedState) {
+            console.error(`❌ ${config.name} OAuth state 검증 실패. CSRF 공격 가능성.`);
+            localStorage.removeItem(config.storageKeys.callbackProcessing);
+            setTimeout(() => {
+              navigate('/', { replace: true });
+            }, 2000);
+            return;
+          }
+          
           // OAuth 진행 중인지 확인
           const oauthInProgress = localStorage.getItem('oauth_in_progress');
           const oauthProvider = localStorage.getItem('oauth_provider');
@@ -58,7 +73,7 @@ const OAuthCallback = ({ provider }: OAuthCallbackProps) => {
           if (oauthInProgress !== 'true' || oauthProvider !== provider) {
             console.warn(`⚠️ ${config.name} OAuth가 진행 중이 아닙니다. 메인 페이지로 이동합니다.`);
             setTimeout(() => {
-              window.location.href = '/';
+              navigate('/', { replace: true });
             }, 2000);
             return;
           }
@@ -71,7 +86,7 @@ const OAuthCallback = ({ provider }: OAuthCallbackProps) => {
               localStorage.removeItem('oauth_in_progress');
               localStorage.removeItem('oauth_provider');
               setTimeout(() => {
-                window.location.href = '/';
+                navigate('/', { replace: true });
               }, 1000);
               return;
             }
@@ -85,7 +100,7 @@ const OAuthCallback = ({ provider }: OAuthCallbackProps) => {
             localStorage.setItem(config.storageKeys.codeUsed, 'false');
             
             setTimeout(() => {
-              window.location.href = '/';
+              navigate('/', { replace: true });
             }, 1000);
           } else if (window.opener) {
             // 팝업 모드 (기존 로직)
@@ -104,25 +119,25 @@ const OAuthCallback = ({ provider }: OAuthCallbackProps) => {
           } else {
             // 일반 페이지 모드
             setTimeout(() => {
-              window.location.href = '/';
+              navigate('/', { replace: true });
             }, 1000);
           }
         } else if (error) {
           console.error(`${config.name} OAuth 에러:`, error);
           setTimeout(() => {
-            window.location.href = '/';
+            navigate('/', { replace: true });
           }, 2000);
         } else {
           console.error('인증 코드나 에러 정보가 없습니다.');
           setTimeout(() => {
-            window.location.href = '/';
+            navigate('/', { replace: true });
           }, 2000);
         }
       } catch (e) {
         console.error(`${config.name} OAuth 콜백 처리 오류:`, e);
         localStorage.removeItem(config.storageKeys.callbackProcessing);
         setTimeout(() => {
-          window.location.href = '/';
+          navigate('/', { replace: true });
         }, 2000);
       } finally {
         setTimeout(() => {
@@ -132,7 +147,7 @@ const OAuthCallback = ({ provider }: OAuthCallbackProps) => {
     };
 
     handleOAuthCallback();
-  }, [location.pathname, provider, config]);
+  }, [location.pathname, provider, config, navigate]);
 
   return (
     <div style={{

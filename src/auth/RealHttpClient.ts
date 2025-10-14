@@ -181,8 +181,8 @@ export class RealHttpClient implements HttpClient {
         headers: {},
         json: async () => ({ 
           error: userMessage,
-          errorType: errorType,
-          originalError: error instanceof Error ? error.message : '알 수 없는 오류'
+          errorType: errorType
+          // originalError는 로깅 전용으로만 유지(클라이언트 반환 금지)
         }),
         text: async () => userMessage
       };
