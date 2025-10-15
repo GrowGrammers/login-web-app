@@ -5,6 +5,7 @@ import { isJWTExpired } from '../../utils/jwtUtils';
 import { useAuthStatus } from '../../hooks';
 import { useAuthStore } from '../../stores/authStore';
 import { BUTTON_STYLES, CARD_STYLES, LOADING_STYLES } from '../../styles';
+import SocialAccountLink from './SocialAccountLink';
 
 // HttpOnly 쿠키는 JavaScript에서 접근할 수 없으므로 쿠키 읽기 함수는 사용하지 않음
 
@@ -275,6 +276,9 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
             </div>
           )}
         </div>
+
+        {/* 로그인 방식 연동 */}
+        <SocialAccountLink />
 
         {/* 토큰 정보 */}
         <div className={CARD_STYLES.withHeader}>
