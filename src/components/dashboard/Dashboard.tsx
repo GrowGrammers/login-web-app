@@ -1,21 +1,15 @@
 import { useState, useEffect } from 'react';
 import { getAuthManager, getCurrentProviderType } from '../../auth/authManager';
 import { getTokenRefreshService } from '../../auth/TokenRefreshService';
-import { isJWTExpired, getExpirationFromJWT } from '../../utils/jwtUtils';
+import { isJWTExpired } from '../../utils/jwtUtils';
 import { useAuthStatus } from '../../hooks';
+import { useAuthStore } from '../../stores/authStore';
 import { BUTTON_STYLES, CARD_STYLES, LOADING_STYLES } from '../../styles';
 
 // HttpOnly 쿠키는 JavaScript에서 접근할 수 없으므로 쿠키 읽기 함수는 사용하지 않음
 
 interface DashboardProps {
   onLogout: () => void;
-}
-
-interface UserInfo {
-  id?: string;
-  email: string;
-  nickname?: string;
-  provider: string;
 }
 
 interface TokenInfo {
@@ -26,8 +20,7 @@ interface TokenInfo {
 }
 
 const Dashboard = ({ onLogout }: DashboardProps) => {
-  const { isAuthenticated, timeUntilExpiry } = useAuthStatus();
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const { isAuthenticated, timeUntilExpiry, tokenExpiredAt, userInfo } = useAuthStatus();
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -60,24 +53,21 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         setTokenInfo(null);
       }
 
-      // 사용자 정보 가져오기 (localStorage에서 먼저 확인)
+      // 사용자 정보 가져오기 (캐시된 데이터 먼저 확인)
       try {
-        // localStorage에서 사용자 정보 확인
-        const storedUserInfo = localStorage.getItem('user_info');
-        if (storedUserInfo) {
-          const parsedUserInfo = JSON.parse(storedUserInfo);
-          setUserInfo(parsedUserInfo);
+        // 일원화된 메서드로 캐시된 데이터 확인 (localStorage 접근 일원화)
+        const cachedUserInfo = useAuthStore.getState().loadUserInfoFromStorage();
+        if (cachedUserInfo) {
           // 캐시된 데이터가 있으면 API 호출하지 않음 (중복 요청 방지)
           return;
         }
         
-        // localStorage에 없을 때만 API 호출 (한 번만)
+        // 캐시에 없을 때만 API 호출 (한 번만)
         const userResult = await authManager.getCurrentUserInfo();
         
         if (userResult.success && userResult.data) {
-          setUserInfo(userResult.data);
-          // localStorage에 저장
-          localStorage.setItem('user_info', JSON.stringify(userResult.data));
+          // 일원화된 메서드로 저장 (localStorage 접근 일원화)
+          useAuthStore.getState().setUserInfo(userResult.data);
         } else {
           // AuthManager 실패 시 쿠키 기반으로 직접 API 호출 (한 번만)
           try {
@@ -91,12 +81,12 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
             });
 
             if (userInfoResponse.ok) {
-              const userInfo = await userInfoResponse.json();
+              const userInfoData = await userInfoResponse.json();
               
               // data 부분만 사용자 정보로 설정
-              const actualUserInfo = userInfo.success && userInfo.data ? userInfo.data : userInfo;
-              setUserInfo(actualUserInfo);
-              localStorage.setItem('user_info', JSON.stringify(actualUserInfo));
+              const actualUserInfo = userInfoData.success && userInfoData.data ? userInfoData.data : userInfoData;
+              // 일원화된 메서드로 저장 (localStorage 접근 일원화)
+              useAuthStore.getState().setUserInfo(actualUserInfo);
             } else {
               throw new Error(`HTTP ${userInfoResponse.status}`);
             }
@@ -112,8 +102,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                        currentProvider === 'kakao' ? 'Kakao 데모 사용자' : '이메일 데모 사용자',
               provider: getCurrentProviderType()
             };
-            setUserInfo(dummyUserInfo);
-            localStorage.setItem('user_info', JSON.stringify(dummyUserInfo));
+            // 일원화된 메서드로 저장 (localStorage 접근 일원화)
+            useAuthStore.getState().setUserInfo(dummyUserInfo);
           }
         }
       } catch (userError) {
@@ -128,8 +118,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                    currentProvider === 'kakao' ? 'Kakao 데모 사용자' : '이메일 데모 사용자',
           provider: getCurrentProviderType()
         };
-        setUserInfo(dummyUserInfo);
-        localStorage.setItem('user_info', JSON.stringify(dummyUserInfo));
+        // 일원화된 메서드로 저장 (localStorage 접근 일원화)
+        useAuthStore.getState().setUserInfo(dummyUserInfo);
       }
     } catch (error) {
       console.error('❌ 사용자 데이터 로드 실패:', error);
@@ -303,16 +293,12 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                   🍪 HttpOnly 쿠키 (JS 접근 불가, 네트워크 탭에서 확인됨)
                 </span>
               </p>
-              {tokenInfo.accessToken && (() => {
-                // JWT에서 만료 시간 추출 (기존 로직과 동일)
-                const expiredAt = getExpirationFromJWT(tokenInfo.accessToken);
-                return expiredAt ? (
-                  <p className="my-3 text-sm flex justify-between items-center">
-                    <strong className="text-gray-900 font-semibold min-w-[80px]">만료 시간:</strong> 
-                    {new Date(expiredAt).toLocaleString()}
-                  </p>
-                ) : null;
-              })()}
+              {tokenExpiredAt && (
+                <p className="my-3 text-sm flex justify-between items-center">
+                  <strong className="text-gray-900 font-semibold min-w-[80px]">만료 시간:</strong> 
+                  {new Date(tokenExpiredAt).toLocaleString()}
+                </p>
+              )}
               {timeUntilExpiry !== null && (
                 <p className="my-3 text-sm flex justify-between items-center">
                   <strong className="text-gray-900 font-semibold min-w-[80px]">남은 시간:</strong> 
