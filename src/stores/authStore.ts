@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { checkAuthStatus, getAuthManager } from '../auth/authManager';
 import { getTokenRefreshService } from '../auth/TokenRefreshService';
-import { getTimeUntilExpiryFromJWT } from '../utils/jwtUtils';
+import { getExpirationFromJWT } from '../utils/jwtUtils';
 
 /**
  * 사용자 정보 타입
@@ -18,6 +18,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   timeUntilExpiry: number | null;
+  tokenExpiredAt: number | null; // 토큰 만료 시간 (밀리초 타임스탬프)
   userInfo: UserInfo | null;
 
   // Actions
@@ -26,6 +27,7 @@ interface AuthState {
   login: (userInfo?: UserInfo) => void;
   logout: () => void;
   updateTimeUntilExpiry: () => Promise<void>;
+  updateTimeUntilExpiryFromTimestamp: () => void;
   startExpiryTimer: () => void;
   stopExpiryTimer: () => void;
 }
@@ -38,6 +40,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isLoading: true,
   timeUntilExpiry: null,
+  tokenExpiredAt: null,
   userInfo: null,
 
   // 상태 업데이트
@@ -56,15 +59,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const tokenResult = await authManager.getToken();
 
         if (tokenResult.success && tokenResult.data?.accessToken) {
-          // JWT에서 직접 남은 시간 계산
-          const remainingFromJWT = getTimeUntilExpiryFromJWT(tokenResult.data.accessToken);
-          if (remainingFromJWT !== null) {
-            set({ timeUntilExpiry: remainingFromJWT });
+          // JWT에서 만료 시간 가져오기 (밀리초 타임스탬프)
+          const expiredAt = getExpirationFromJWT(tokenResult.data.accessToken);
+          
+          if (expiredAt !== null) {
+            // 만료 시간 저장
+            set({ tokenExpiredAt: expiredAt });
+            
+            // 남은 시간 계산 (분 단위)
+            const remainingMs = expiredAt - Date.now();
+            const remainingMinutes = Math.max(0, Math.floor(remainingMs / (60 * 1000)));
+            set({ timeUntilExpiry: remainingMinutes });
           } else {
             // JWT 파싱 실패시 폴백
             const tokenRefreshService = getTokenRefreshService();
             const remaining = await tokenRefreshService.getTimeUntilExpiry();
-            set({ timeUntilExpiry: remaining });
+            set({ timeUntilExpiry: remaining, tokenExpiredAt: null });
           }
         }
 
@@ -80,11 +90,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       } else {
         // 인증되지 않은 경우 상태 초기화
-        set({ timeUntilExpiry: null, userInfo: null });
+        set({ timeUntilExpiry: null, tokenExpiredAt: null, userInfo: null });
       }
     } catch (error) {
       console.error('인증 상태 확인 중 오류:', error);
-      set({ isAuthenticated: false, timeUntilExpiry: null, userInfo: null });
+      set({ isAuthenticated: false, timeUntilExpiry: null, tokenExpiredAt: null, userInfo: null });
     } finally {
       set({ isLoading: false });
     }
@@ -108,6 +118,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isAuthenticated: false,
       userInfo: null,
       timeUntilExpiry: null,
+      tokenExpiredAt: null,
       isLoading: false
     });
 
@@ -118,7 +129,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.removeItem('user_info');
   },
 
-  // 토큰 만료 시간 업데이트
+  // 토큰 만료 시간 업데이트 (JWT에서 만료 시간을 가져와 저장)
   updateTimeUntilExpiry: async () => {
     const { isAuthenticated } = get();
     if (!isAuthenticated) return;
@@ -128,18 +139,37 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const tokenResult = await authManager.getToken();
 
       if (tokenResult.success && tokenResult.data?.accessToken) {
-        const remainingFromJWT = getTimeUntilExpiryFromJWT(tokenResult.data.accessToken);
-        if (remainingFromJWT !== null) {
-          set({ timeUntilExpiry: remainingFromJWT });
+        // JWT에서 만료 시간 가져오기 (밀리초 타임스탬프)
+        const expiredAt = getExpirationFromJWT(tokenResult.data.accessToken);
+        
+        if (expiredAt !== null) {
+          // 만료 시간 저장
+          set({ tokenExpiredAt: expiredAt });
+          
+          // 남은 시간 계산 (분 단위)
+          const remainingMs = expiredAt - Date.now();
+          const remainingMinutes = Math.max(0, Math.floor(remainingMs / (60 * 1000)));
+          set({ timeUntilExpiry: remainingMinutes });
         } else {
+          // JWT 파싱 실패시 폴백
           const tokenRefreshService = getTokenRefreshService();
           const remaining = await tokenRefreshService.getTimeUntilExpiry();
-          set({ timeUntilExpiry: remaining });
+          set({ timeUntilExpiry: remaining, tokenExpiredAt: null });
         }
       }
     } catch (error) {
       console.error('토큰 만료 시간 업데이트 중 오류:', error);
     }
+  },
+
+  // 타임스탬프로부터 남은 시간 계산 (1초마다 호출)
+  updateTimeUntilExpiryFromTimestamp: () => {
+    const { tokenExpiredAt, isAuthenticated } = get();
+    if (!isAuthenticated || !tokenExpiredAt) return;
+
+    const remainingMs = tokenExpiredAt - Date.now();
+    const remainingMinutes = Math.max(0, Math.floor(remainingMs / (60 * 1000)));
+    set({ timeUntilExpiry: remainingMinutes });
   },
 
   // 만료 시간 타이머 시작
@@ -149,13 +179,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       clearInterval(expiryTimerInterval);
     }
 
-    // 30초마다 토큰 만료 시간 업데이트
-    expiryTimerInterval = window.setInterval(() => {
-      get().updateTimeUntilExpiry();
-    }, 30000);
-
-    // 즉시 한 번 실행
+    // 즉시 한 번 실행 (JWT에서 만료 시간 가져오기)
     get().updateTimeUntilExpiry();
+
+    // 1초마다 남은 시간 업데이트 (실시간 카운트다운)
+    expiryTimerInterval = window.setInterval(() => {
+      get().updateTimeUntilExpiryFromTimestamp();
+    }, 1000); // 1초마다 업데이트
   },
 
   // 만료 시간 타이머 중지
