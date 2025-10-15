@@ -1,4 +1,6 @@
-import { getCurrentProviderType } from '../../auth/authManager';
+import { useState, useEffect } from 'react';
+import { getCurrentProviderType, getAuthManager } from '../../auth/authManager';
+import { useAuthStore } from '../../stores/authStore';
 import { CARD_STYLES } from '../../styles';
 
 interface SocialProvider {
@@ -70,15 +72,119 @@ const ToggleSwitch = ({ isOn, disabled, onClick }: ToggleSwitchProps) => {
 
 const SocialAccountLink = () => {
   const currentProvider = getCurrentProviderType();
+  const userInfo = useAuthStore((state) => state.userInfo);
+  const [linkedProviders, setLinkedProviders] = useState<string[]>([currentProvider]);
+  const [isLinking, setIsLinking] = useState<string | null>(null);
 
-  const handleToggle = (providerId: string) => {
-    // TODO: 연동 로직 구현 예정
-    console.log(`Toggle ${providerId}`);
+  // 백엔드에서 받은 회원정보로 연동된 provider 목록 업데이트
+  useEffect(() => {
+    if (userInfo && userInfo.linkedProviders) {
+      setLinkedProviders(userInfo.linkedProviders);
+    } else {
+      setLinkedProviders([currentProvider]);
+    }
+  }, [userInfo, currentProvider]);
+
+  // 연동 완료 확인 및 회원정보 갱신 (최초 마운트 시에만)
+  useEffect(() => {
+    // URL에서 연동 완료 확인 (OAuth 콜백에서 대시보드로 왔을 때)
+    const params = new URLSearchParams(window.location.search);
+    const justLinked = params.get('linked');
+    
+    if (justLinked) {
+      // URL 파라미터 제거
+      window.history.replaceState({}, '', '/dashboard');
+      
+      alert(`✅ ${justLinked} 연동이 완료되었습니다!`);
+      
+      // 연동 완료 후 사용자 정보 다시 가져오기 (연동된 provider 목록 업데이트)
+      const fetchUserInfo = async () => {
+        const authManager = getAuthManager();
+        const result = await authManager.getCurrentUserInfo();
+        if (result.success && result.data) {
+          useAuthStore.getState().setUserInfo(result.data);
+        }
+      };
+      fetchUserInfo();
+    }
+  }, []); // 최초 마운트 시에만 실행
+
+  const handleToggle = async (providerId: string) => {
+    if (isLinking) return; // 이미 연동 중이면 무시
+
+    const isCurrentlyLinked = linkedProviders.includes(providerId);
+    
+    if (isCurrentlyLinked) {
+      // 연동 해제 로직 (추후 구현)
+      console.log(`연동 해제: ${providerId}`);
+    } else {
+      // 연동 로직
+      await linkProvider(providerId);
+    }
+  };
+
+  const linkProvider = async (providerId: string) => {
+    try {
+      setIsLinking(providerId);
+      
+      // 현재 JWT 토큰 가져오기
+      const authManager = getAuthManager();
+      const tokenResult = await authManager.getToken();
+      
+      if (!tokenResult.success || !tokenResult.data) {
+        alert('❌ 로그인 토큰을 찾을 수 없습니다.');
+        return;
+      }
+
+      // OAuth 연동의 경우 새 창에서 로그인 진행
+      if (['naver', 'kakao', 'google'].includes(providerId)) {
+        await handleOAuthLink(providerId);
+      } else if (providerId === 'email') {
+        await handleEmailLink();
+      }
+
+    } catch (error) {
+      console.error('❌ 연동 중 오류:', error);
+      alert('❌ 연동 중 오류가 발생했습니다.');
+    } finally {
+      setIsLinking(null);
+    }
+  };
+
+
+  const handleOAuthLink = async (providerId: string) => {
+    // 연동 모드 플래그 저장
+    localStorage.setItem('is_linking_mode', 'true');
+    localStorage.setItem('linking_provider', providerId);
+    
+    // OAuth 연동 URL로 이동
+    const authUrl = getOAuthAuthUrl(providerId);
+    if (!authUrl) {
+      alert('❌ OAuth 설정을 찾을 수 없습니다.');
+      return;
+    }
+
+    // 현재 창에서 OAuth 로그인 페이지로 이동
+    window.location.href = authUrl;
+  };
+
+  const handleEmailLink = async () => {
+    // 이메일 연동은 별도 UI 필요 (추후 구현)
+    alert('📧 이메일 연동은 추후 구현 예정입니다.');
+  };
+
+  const getOAuthAuthUrl = (providerId: string): string | null => {
+    // OAuth 연동용 URL
+    const configs: Record<string, string> = {
+      'naver': '/link/naver',
+      'kakao': '/link/kakao',
+      'google': '/link/google'
+    };
+    return configs[providerId] || null;
   };
 
   const isProviderLinked = (providerId: string) => {
-    // 현재는 로그인한 provider만 연동된 것으로 표시
-    return providerId === currentProvider;
+    return linkedProviders.includes(providerId);
   };
 
   return (
@@ -90,6 +196,7 @@ const SocialAccountLink = () => {
         {SOCIAL_PROVIDERS.map((provider) => {
           const isLinked = isProviderLinked(provider.id);
           const isCurrent = provider.id === currentProvider;
+          const isLinkingThis = isLinking === provider.id;
 
           return (
             <div
@@ -108,12 +215,13 @@ const SocialAccountLink = () => {
                 )}
                 <span className={`${provider.color}`}>
                   {provider.name}
+                  {isLinkingThis && <span className="text-xs text-blue-600 ml-2">연동 중...</span>}
                 </span>
               </div>
               <ToggleSwitch
                 isOn={isLinked}
-                disabled={isCurrent}
-                onClick={() => !isCurrent && handleToggle(provider.id)}
+                disabled={isCurrent || isLinkingThis}
+                onClick={() => !isCurrent && !isLinkingThis && handleToggle(provider.id)}
               />
             </div>
           );

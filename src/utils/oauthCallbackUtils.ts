@@ -59,7 +59,27 @@ export async function handleOAuthProviderCallback(
       // RealHttpClient에서 이미 사용자 정보를 가져오므로 중복 호출 제거
       // await fetchUserInfoAfterLogin(provider);
       
-      navigate('/login/complete');
+      // 연동 모드인지 확인
+      const isLinkingMode = localStorage.getItem('is_linking_mode');
+      const linkingProvider = localStorage.getItem('linking_provider');
+      
+      console.log(`🔗 OAuth 콜백 완료 - 연동 모드: ${isLinkingMode}, provider: ${linkingProvider}`);
+      
+      if (isLinkingMode === 'true') {
+        // 연동 모드면 대시보드로
+        console.log('✅ 연동 모드 → /dashboard로 이동');
+        
+        // 연동 모드 플래그는 여기서 제거 (OAuth 콜백 완료 시점)
+        localStorage.removeItem('is_linking_mode');
+        localStorage.removeItem('linking_provider');
+        
+        // URL 파라미터로 연동 완료된 provider 전달
+        navigate(`/dashboard?linked=${linkingProvider || provider}`);
+      } else {
+        // 일반 로그인이면 로그인 완료 페이지로
+        console.log('✅ 일반 로그인 → /login/complete로 이동');
+        navigate('/login/complete');
+      }
     } else {
       console.error(`${provider} 로그인 실패:`, result.message);
       

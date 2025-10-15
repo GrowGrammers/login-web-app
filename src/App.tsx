@@ -133,9 +133,28 @@ function AppContent() {
         // 인증된 상태이면 토큰 갱신 서비스 시작
         initializeTokenRefreshService();
         setShowSplash(false);
-        // 이미 로그인 완료 페이지나 대시보드, 서비스 메인에 있으면 리다이렉트하지 않음
-        if (location.pathname !== '/login/complete' && location.pathname !== '/dashboard' && location.pathname !== '/service') {
-          navigate('/login/complete');
+        
+        // 연동 모드인지 확인
+        const isLinkingMode = localStorage.getItem('is_linking_mode');
+        
+        console.log(`🔄 App.tsx useEffect - 현재 경로: ${location.pathname}, 연동 모드: ${isLinkingMode}`);
+        
+        // 이미 로그인 완료 페이지나 대시보드, 서비스 메인, 연동 페이지, OAuth 콜백 페이지에 있으면 리다이렉트하지 않음
+        if (location.pathname !== '/login/complete' && 
+            location.pathname !== '/dashboard' && 
+            location.pathname !== '/service' &&
+            !location.pathname.startsWith('/link/') &&
+            !location.pathname.startsWith('/auth/')) {
+          // 연동 모드면 대시보드로, 아니면 로그인 완료 페이지로
+          if (isLinkingMode === 'true') {
+            console.log('📍 App.tsx → /dashboard로 리다이렉트');
+            navigate('/dashboard');
+          } else {
+            console.log('📍 App.tsx → /login/complete로 리다이렉트');
+            navigate('/login/complete');
+          }
+        } else {
+          console.log('✋ App.tsx → 리다이렉트 안 함 (예외 경로)');
         }
       } else {
         // 인증되지 않은 상태이면 스플래시 화면을 숨김 (로그인 페이지 접근 허용)
@@ -286,6 +305,9 @@ function AppContent() {
           <Route path="/login/complete" element={<LoginComplete />} />
           <Route path="/dashboard" element={<Dashboard onLogout={handleLogout} />} />
           <Route path="/service" element={<ServiceMain />} />
+          <Route path="/link/google" element={<GoogleLogin />} />
+          <Route path="/link/kakao" element={<KakaoLogin />} />
+          <Route path="/link/naver" element={<NaverLogin />} />
           <Route path="/auth/google/callback" element={<GoogleCallback />} />
           <Route path="/auth/kakao/callback" element={<KakaoCallback />} />
           <Route path="/auth/naver/callback" element={<NaverCallback />} />
