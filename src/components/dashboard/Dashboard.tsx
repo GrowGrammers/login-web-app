@@ -3,19 +3,13 @@ import { getAuthManager, getCurrentProviderType } from '../../auth/authManager';
 import { getTokenRefreshService } from '../../auth/TokenRefreshService';
 import { isJWTExpired, getExpirationFromJWT } from '../../utils/jwtUtils';
 import { useAuthStatus } from '../../hooks';
+import { useAuthStore, type UserInfo } from '../../stores/authStore';
 import { BUTTON_STYLES, CARD_STYLES, LOADING_STYLES } from '../../styles';
 
 // HttpOnly 쿠키는 JavaScript에서 접근할 수 없으므로 쿠키 읽기 함수는 사용하지 않음
 
 interface DashboardProps {
   onLogout: () => void;
-}
-
-interface UserInfo {
-  id?: string;
-  email: string;
-  nickname?: string;
-  provider: string;
 }
 
 interface TokenInfo {
@@ -26,11 +20,18 @@ interface TokenInfo {
 }
 
 const Dashboard = ({ onLogout }: DashboardProps) => {
-  const { isAuthenticated, timeUntilExpiry } = useAuthStatus();
+  const { isAuthenticated, timeUntilExpiry, userInfo: storeUserInfo } = useAuthStatus();
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Zustand 스토어에서 userInfo 가져오기
+  useEffect(() => {
+    if (storeUserInfo) {
+      setUserInfo(storeUserInfo);
+    }
+  }, [storeUserInfo]);
 
   useEffect(() => {
     // 인증된 상태에서만 사용자 데이터 로드
@@ -67,6 +68,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         if (storedUserInfo) {
           const parsedUserInfo = JSON.parse(storedUserInfo);
           setUserInfo(parsedUserInfo);
+          // Zustand 스토어에도 저장
+          useAuthStore.getState().setAuthStatus({ userInfo: parsedUserInfo });
           // 캐시된 데이터가 있으면 API 호출하지 않음 (중복 요청 방지)
           return;
         }
@@ -78,6 +81,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
           setUserInfo(userResult.data);
           // localStorage에 저장
           localStorage.setItem('user_info', JSON.stringify(userResult.data));
+          // Zustand 스토어에도 저장
+          useAuthStore.getState().setAuthStatus({ userInfo: userResult.data });
         } else {
           // AuthManager 실패 시 쿠키 기반으로 직접 API 호출 (한 번만)
           try {
@@ -97,6 +102,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               const actualUserInfo = userInfo.success && userInfo.data ? userInfo.data : userInfo;
               setUserInfo(actualUserInfo);
               localStorage.setItem('user_info', JSON.stringify(actualUserInfo));
+              // Zustand 스토어에도 저장
+              useAuthStore.getState().setAuthStatus({ userInfo: actualUserInfo });
             } else {
               throw new Error(`HTTP ${userInfoResponse.status}`);
             }
@@ -114,6 +121,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
             };
             setUserInfo(dummyUserInfo);
             localStorage.setItem('user_info', JSON.stringify(dummyUserInfo));
+            // Zustand 스토어에도 저장
+            useAuthStore.getState().setAuthStatus({ userInfo: dummyUserInfo });
           }
         }
       } catch (userError) {
@@ -130,6 +139,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         };
         setUserInfo(dummyUserInfo);
         localStorage.setItem('user_info', JSON.stringify(dummyUserInfo));
+        // Zustand 스토어에도 저장
+        useAuthStore.getState().setAuthStatus({ userInfo: dummyUserInfo });
       }
     } catch (error) {
       console.error('❌ 사용자 데이터 로드 실패:', error);

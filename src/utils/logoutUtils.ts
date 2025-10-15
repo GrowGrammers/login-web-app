@@ -3,6 +3,7 @@
  */
 
 import type { AuthManager, AuthProviderType } from 'growgrammers-auth-core';
+import { useAuthStore } from '../stores/authStore';
 
 /**
  * OAuth 제공자별 로그아웃 처리 (구글, 네이버, 카카오)
@@ -28,6 +29,9 @@ export async function handleOAuthLogout(provider: 'google' | 'naver' | 'kakao', 
       
       // 사용자 정보 정리
       localStorage.removeItem('user_info');
+      
+      // Zustand 스토어 상태 업데이트 (로그아웃)
+      useAuthStore.getState().logout();
     }
     
     return result;
@@ -56,6 +60,9 @@ export async function handleEmailLogout(authManager: AuthManager, provider: stri
     
     // 사용자 정보 정리
     localStorage.removeItem('user_info');
+    
+    // Zustand 스토어 상태 업데이트 (로그아웃)
+    useAuthStore.getState().logout();
   }
   
   return result;

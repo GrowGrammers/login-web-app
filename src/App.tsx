@@ -154,8 +154,6 @@ function AppContent() {
   };
 
   const handleLoginSuccess = async () => {
-    // 로그인 성공, 인증 상태 업데이트
-    await refreshAuthStatus();
     // 로그인 성공 시 토큰 갱신 서비스 시작
     initializeTokenRefreshService();
     
@@ -165,12 +163,10 @@ function AppContent() {
       await fetchUserInfoAfterEmailLogin();
     }
     
-    navigate('/login/complete');
+    // Zustand 스토어 상태 업데이트 (전역 상태 즉시 반영)
+    await refreshAuthStatus();
     
-    // 잠시 후 토큰 상태를 확인하여 UI 업데이트
-    setTimeout(async () => {
-      await refreshAuthStatus();
-    }, 500);
+    navigate('/login/complete');
   };
 
   const handleLogout = async () => {
@@ -189,6 +185,7 @@ function AppContent() {
       }
       
       if (result.success) {
+        // Zustand 스토어 상태 업데이트 (전역 상태 즉시 반영)
         await refreshAuthStatus();
         setShowSplash(true);
         alert('✅ 로그아웃되었습니다.');

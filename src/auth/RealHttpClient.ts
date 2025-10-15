@@ -1,6 +1,7 @@
 import type { HttpClient, HttpRequestConfig, HttpResponse } from 'growgrammers-auth-core';
 import { getTokenRefreshService } from './TokenRefreshService';
 import { getExpirationFromJWT } from '../utils/jwtUtils';
+import { useAuthStore } from '../stores/authStore';
 
 // Helpers
 function isFormData(v: unknown): v is FormData {
@@ -134,6 +135,9 @@ export class RealHttpClient implements HttpClient {
               accessToken: accessToken,
               expiredAt: expiredAt
             });
+            
+            // Zustand 스토어 상태 업데이트 (로그인 성공)
+            useAuthStore.getState().login();
             
             // 토큰 저장 후 사용자 정보 가져오기
             await this.fetchUserInfo();
