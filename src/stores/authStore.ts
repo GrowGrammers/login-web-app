@@ -162,7 +162,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  // 타임스탬프로부터 남은 시간 계산 (1초마다 호출)
+  // 타임스탬프로부터 남은 시간 계산 (30초마다 호출)
   updateTimeUntilExpiryFromTimestamp: () => {
     const { tokenExpiredAt, isAuthenticated } = get();
     if (!isAuthenticated || !tokenExpiredAt) return;
@@ -182,10 +182,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // 즉시 한 번 실행 (JWT에서 만료 시간 가져오기)
     get().updateTimeUntilExpiry();
 
-    // 1초마다 남은 시간 업데이트 (실시간 카운트다운)
+    // 30초마다 남은 시간 업데이트 (분 단위 표시에 적합한 주기)
     expiryTimerInterval = window.setInterval(() => {
       get().updateTimeUntilExpiryFromTimestamp();
-    }, 1000); // 1초마다 업데이트
+    }, 30_000); // 30초마다 업데이트
   },
 
   // 만료 시간 타이머 중지
