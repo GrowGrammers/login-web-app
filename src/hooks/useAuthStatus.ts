@@ -4,6 +4,7 @@ interface UseAuthStatusReturn {
   isAuthenticated: boolean;
   isLoading: boolean;
   timeUntilExpiry: number | null;
+  tokenExpiredAt: number | null;
   userInfo: UserInfo | null;
   refreshAuthStatus: () => Promise<void>;
   login: (userInfo?: UserInfo) => void;
@@ -19,6 +20,7 @@ export const useAuthStatus = (): UseAuthStatusReturn => {
     isAuthenticated,
     isLoading,
     timeUntilExpiry,
+    tokenExpiredAt,
     userInfo,
     refreshAuthStatus,
     login,
@@ -29,6 +31,7 @@ export const useAuthStatus = (): UseAuthStatusReturn => {
     isAuthenticated,
     isLoading,
     timeUntilExpiry,
+    tokenExpiredAt,
     userInfo,
     refreshAuthStatus,
     login,

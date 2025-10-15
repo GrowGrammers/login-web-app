@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getAuthManager, getCurrentProviderType } from '../../auth/authManager';
 import { getTokenRefreshService } from '../../auth/TokenRefreshService';
-import { isJWTExpired, getExpirationFromJWT } from '../../utils/jwtUtils';
+import { isJWTExpired } from '../../utils/jwtUtils';
 import { useAuthStatus } from '../../hooks';
 import { useAuthStore } from '../../stores/authStore';
 import { BUTTON_STYLES, CARD_STYLES, LOADING_STYLES } from '../../styles';
@@ -20,7 +20,7 @@ interface TokenInfo {
 }
 
 const Dashboard = ({ onLogout }: DashboardProps) => {
-  const { isAuthenticated, timeUntilExpiry, userInfo } = useAuthStatus();
+  const { isAuthenticated, timeUntilExpiry, tokenExpiredAt, userInfo } = useAuthStatus();
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -293,16 +293,12 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                   🍪 HttpOnly 쿠키 (JS 접근 불가, 네트워크 탭에서 확인됨)
                 </span>
               </p>
-              {tokenInfo.accessToken && (() => {
-                // JWT에서 만료 시간 추출 (기존 로직과 동일)
-                const expiredAt = getExpirationFromJWT(tokenInfo.accessToken);
-                return expiredAt ? (
-                  <p className="my-3 text-sm flex justify-between items-center">
-                    <strong className="text-gray-900 font-semibold min-w-[80px]">만료 시간:</strong> 
-                    {new Date(expiredAt).toLocaleString()}
-                  </p>
-                ) : null;
-              })()}
+              {tokenExpiredAt && (
+                <p className="my-3 text-sm flex justify-between items-center">
+                  <strong className="text-gray-900 font-semibold min-w-[80px]">만료 시간:</strong> 
+                  {new Date(tokenExpiredAt).toLocaleString()}
+                </p>
+              )}
               {timeUntilExpiry !== null && (
                 <p className="my-3 text-sm flex justify-between items-center">
                   <strong className="text-gray-900 font-semibold min-w-[80px]">남은 시간:</strong> 

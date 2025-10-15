@@ -162,6 +162,12 @@ export class TokenRefreshService {
       });
 
       if (refreshResult.success) {
+        // 토큰 갱신 성공 시 authStore의 토큰 만료 시간 업데이트
+        // authStore를 동적으로 import하여 순환 참조 방지
+        const { useAuthStore } = await import('../stores/authStore');
+        await useAuthStore.getState().updateTimeUntilExpiry();
+        
+        //console.log('[TokenRefreshService] 토큰 갱신 성공 및 만료 시간 업데이트 완료');
         return true;
       } else {
         console.error('[TokenRefreshService] 토큰 갱신 실패:', refreshResult.error);
