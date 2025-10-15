@@ -94,7 +94,7 @@ const SocialAccountLink = () => {
           return (
             <div
               key={provider.id}
-              className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+              className="my-3 text-sm flex justify-between items-center p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
             >
               <div className="flex items-center gap-3">
                 {provider.icon.startsWith('/') ? (
@@ -104,7 +104,7 @@ const SocialAccountLink = () => {
                     className="w-6 h-6 object-contain"
                   />
                 ) : (
-                  <span className="text-sm">{provider.icon}</span>
+                  <span className="text-lg">{provider.icon}</span>
                 )}
                 <span className={`${provider.color}`}>
                   {provider.name}

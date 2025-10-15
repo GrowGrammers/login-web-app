@@ -31,6 +31,7 @@ import {
   NaverCallback
 } from './components/auth';
 import Dashboard from './components/dashboard/Dashboard';
+import { ServiceMain } from './components/service';
 import type { EmailLoginRef } from './components/auth/EmailLogin';
 import './App.css';
 
@@ -132,8 +133,8 @@ function AppContent() {
         // 인증된 상태이면 토큰 갱신 서비스 시작
         initializeTokenRefreshService();
         setShowSplash(false);
-        // 이미 로그인 완료 페이지나 대시보드에 있으면 리다이렉트하지 않음
-        if (location.pathname !== '/login/complete' && location.pathname !== '/dashboard') {
+        // 이미 로그인 완료 페이지나 대시보드, 서비스 메인에 있으면 리다이렉트하지 않음
+        if (location.pathname !== '/login/complete' && location.pathname !== '/dashboard' && location.pathname !== '/service') {
           navigate('/login/complete');
         }
       } else {
@@ -284,6 +285,7 @@ function AppContent() {
           <Route path="/login/naver" element={<NaverLogin />} />
           <Route path="/login/complete" element={<LoginComplete />} />
           <Route path="/dashboard" element={<Dashboard onLogout={handleLogout} />} />
+          <Route path="/service" element={<ServiceMain />} />
           <Route path="/auth/google/callback" element={<GoogleCallback />} />
           <Route path="/auth/kakao/callback" element={<KakaoCallback />} />
           <Route path="/auth/naver/callback" element={<NaverCallback />} />

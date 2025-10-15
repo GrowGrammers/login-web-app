@@ -4,17 +4,11 @@ const LoginComplete = () => {
   const navigate = useNavigate();
 
   const handleConnectNow = () => {
-    alert('계정 연동 추후 구현 예정입니다.');
+    navigate('/dashboard');
   };
 
   const handleLater = () => {
-
-    
-    try {
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('navigate 오류:', error);
-    }
+    navigate('/service');
   };
 
   return (
@@ -55,7 +49,7 @@ const LoginComplete = () => {
             className="w-full p-4 bg-gray-100 text-gray-700 rounded-xl text-base font-semibold hover:bg-gray-200 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
             style={{ zIndex: 10, position: 'relative' }}
           >
-            다음에 할게요 (회원 정보 확인)
+            다음에 할게요
           </button>
         </div>
       </div>
