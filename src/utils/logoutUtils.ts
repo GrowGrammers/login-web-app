@@ -27,10 +27,8 @@ export async function handleOAuthLogout(provider: 'google' | 'naver' | 'kakao', 
       localStorage.removeItem('oauth_provider');
       localStorage.removeItem('current_provider_type');
       
-      // 사용자 정보 정리
-      localStorage.removeItem('user_info');
-      
       // Zustand 스토어 상태 업데이트 (로그아웃)
+      // logout() 내부에서 clearUserInfo()를 호출하여 user_info도 정리됨
       useAuthStore.getState().logout();
     }
     
@@ -58,10 +56,8 @@ export async function handleEmailLogout(authManager: AuthManager, provider: stri
     // 이메일 로그아웃 시에도 provider type 정리
     localStorage.removeItem('current_provider_type');
     
-    // 사용자 정보 정리
-    localStorage.removeItem('user_info');
-    
     // Zustand 스토어 상태 업데이트 (로그아웃)
+    // logout() 내부에서 clearUserInfo()를 호출하여 user_info도 정리됨
     useAuthStore.getState().logout();
   }
   

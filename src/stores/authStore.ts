@@ -5,6 +5,11 @@ import { getExpirationFromJWT } from '../utils/jwtUtils';
 
 /**
  * 사용자 정보 타입
+ * 
+ * 보안 참고:
+ * - localStorage 저장은 authStore의 setUserInfo/clearUserInfo를 통해서만 수행
+ * - XSS 공격 시 PII 유출 위험이 있으므로 최소 필드만 저장 권장
+ * - 향후 암호화나 다른 저장소로 변경 시 이 store만 수정하면 됨
  */
 export interface UserInfo {
   id?: string;
@@ -30,6 +35,10 @@ interface AuthState {
   updateTimeUntilExpiryFromTimestamp: () => void;
   startExpiryTimer: () => void;
   stopExpiryTimer: () => void;
+  // UserInfo 관리 (localStorage 일원화)
+  setUserInfo: (userInfo: UserInfo) => void;
+  loadUserInfoFromStorage: () => UserInfo | null;
+  clearUserInfo: () => void;
 }
 
 // 타이머 ID 저장
@@ -78,23 +87,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           }
         }
 
-        // 사용자 정보 로드 (localStorage에서)
-        const storedUserInfo = localStorage.getItem('user_info');
-        if (storedUserInfo) {
-          try {
-            const parsedUserInfo = JSON.parse(storedUserInfo);
-            set({ userInfo: parsedUserInfo });
-          } catch (error) {
-            console.error('사용자 정보 파싱 실패:', error);
-          }
-        }
+        // 사용자 정보 로드 (일원화된 메서드 사용)
+        get().loadUserInfoFromStorage();
       } else {
         // 인증되지 않은 경우 상태 초기화
-        set({ timeUntilExpiry: null, tokenExpiredAt: null, userInfo: null });
+        set({ timeUntilExpiry: null, tokenExpiredAt: null });
+        get().clearUserInfo();
       }
     } catch (error) {
       console.error('인증 상태 확인 중 오류:', error);
-      set({ isAuthenticated: false, timeUntilExpiry: null, tokenExpiredAt: null, userInfo: null });
+      set({ isAuthenticated: false, timeUntilExpiry: null, tokenExpiredAt: null });
+      get().clearUserInfo();
     } finally {
       set({ isLoading: false });
     }
@@ -116,7 +119,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: () => {
     set({
       isAuthenticated: false,
-      userInfo: null,
       timeUntilExpiry: null,
       tokenExpiredAt: null,
       isLoading: false
@@ -125,8 +127,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // 로그아웃 시 타이머 중지
     get().stopExpiryTimer();
 
-    // localStorage 정리
-    localStorage.removeItem('user_info');
+    // UserInfo 및 localStorage 정리 (일원화된 메서드 사용)
+    get().clearUserInfo();
   },
 
   // 토큰 만료 시간 업데이트 (JWT에서 만료 시간을 가져와 저장)
@@ -193,6 +195,56 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (expiryTimerInterval) {
       clearInterval(expiryTimerInterval);
       expiryTimerInterval = null;
+    }
+  },
+
+  /**
+   * UserInfo 설정 및 localStorage 저장 (일원화된 진입점)
+   * 
+   * 보안: localStorage 접근을 이 메서드로 일원화하여
+   * - 무분별한 PII 저장 방지
+   * - 향후 암호화 적용 시 한 곳만 수정
+   * - 감사/로깅 추가 용이
+   */
+  setUserInfo: (userInfo: UserInfo) => {
+    set({ userInfo });
+    try {
+      localStorage.setItem('user_info', JSON.stringify(userInfo));
+    } catch (error) {
+      console.error('localStorage 저장 실패:', error);
+    }
+  },
+
+  /**
+   * localStorage에서 UserInfo 로드 (일원화된 진입점)
+   * 
+   * 보안: localStorage 읽기를 이 메서드로 일원화
+   */
+  loadUserInfoFromStorage: (): UserInfo | null => {
+    try {
+      const storedUserInfo = localStorage.getItem('user_info');
+      if (storedUserInfo) {
+        const parsedUserInfo = JSON.parse(storedUserInfo);
+        set({ userInfo: parsedUserInfo });
+        return parsedUserInfo;
+      }
+    } catch (error) {
+      console.error('localStorage 로드 실패:', error);
+    }
+    return null;
+  },
+
+  /**
+   * UserInfo 및 localStorage 정리 (일원화된 진입점)
+   * 
+   * 보안: localStorage 삭제를 이 메서드로 일원화
+   */
+  clearUserInfo: () => {
+    set({ userInfo: null });
+    try {
+      localStorage.removeItem('user_info');
+    } catch (error) {
+      console.error('localStorage 정리 실패:', error);
     }
   }
 }));

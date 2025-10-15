@@ -53,26 +53,21 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         setTokenInfo(null);
       }
 
-      // 사용자 정보 가져오기 (localStorage에서 먼저 확인)
+      // 사용자 정보 가져오기 (캐시된 데이터 먼저 확인)
       try {
-        // localStorage에서 사용자 정보 확인
-        const storedUserInfo = localStorage.getItem('user_info');
-        if (storedUserInfo) {
-          const parsedUserInfo = JSON.parse(storedUserInfo);
-          // Zustand 스토어에만 저장
-          useAuthStore.getState().setAuthStatus({ userInfo: parsedUserInfo });
+        // 일원화된 메서드로 캐시된 데이터 확인 (localStorage 접근 일원화)
+        const cachedUserInfo = useAuthStore.getState().loadUserInfoFromStorage();
+        if (cachedUserInfo) {
           // 캐시된 데이터가 있으면 API 호출하지 않음 (중복 요청 방지)
           return;
         }
         
-        // localStorage에 없을 때만 API 호출 (한 번만)
+        // 캐시에 없을 때만 API 호출 (한 번만)
         const userResult = await authManager.getCurrentUserInfo();
         
         if (userResult.success && userResult.data) {
-          // localStorage에 저장
-          localStorage.setItem('user_info', JSON.stringify(userResult.data));
-          // Zustand 스토어에만 저장 (SSOT)
-          useAuthStore.getState().setAuthStatus({ userInfo: userResult.data });
+          // 일원화된 메서드로 저장 (localStorage 접근 일원화)
+          useAuthStore.getState().setUserInfo(userResult.data);
         } else {
           // AuthManager 실패 시 쿠키 기반으로 직접 API 호출 (한 번만)
           try {
@@ -90,9 +85,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               
               // data 부분만 사용자 정보로 설정
               const actualUserInfo = userInfoData.success && userInfoData.data ? userInfoData.data : userInfoData;
-              localStorage.setItem('user_info', JSON.stringify(actualUserInfo));
-              // Zustand 스토어에만 저장 (SSOT)
-              useAuthStore.getState().setAuthStatus({ userInfo: actualUserInfo });
+              // 일원화된 메서드로 저장 (localStorage 접근 일원화)
+              useAuthStore.getState().setUserInfo(actualUserInfo);
             } else {
               throw new Error(`HTTP ${userInfoResponse.status}`);
             }
@@ -108,9 +102,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                        currentProvider === 'kakao' ? 'Kakao 데모 사용자' : '이메일 데모 사용자',
               provider: getCurrentProviderType()
             };
-            localStorage.setItem('user_info', JSON.stringify(dummyUserInfo));
-            // Zustand 스토어에만 저장 (SSOT)
-            useAuthStore.getState().setAuthStatus({ userInfo: dummyUserInfo });
+            // 일원화된 메서드로 저장 (localStorage 접근 일원화)
+            useAuthStore.getState().setUserInfo(dummyUserInfo);
           }
         }
       } catch (userError) {
@@ -125,9 +118,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                    currentProvider === 'kakao' ? 'Kakao 데모 사용자' : '이메일 데모 사용자',
           provider: getCurrentProviderType()
         };
-        localStorage.setItem('user_info', JSON.stringify(dummyUserInfo));
-        // Zustand 스토어에만 저장 (SSOT)
-        useAuthStore.getState().setAuthStatus({ userInfo: dummyUserInfo });
+        // 일원화된 메서드로 저장 (localStorage 접근 일원화)
+        useAuthStore.getState().setUserInfo(dummyUserInfo);
       }
     } catch (error) {
       console.error('❌ 사용자 데이터 로드 실패:', error);
