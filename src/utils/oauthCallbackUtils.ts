@@ -91,7 +91,8 @@ export async function handleOAuthProviderCallback(
             credentials: 'include',
             body: JSON.stringify({
               authCode: authCode,
-              codeVerifier: codeVerifier
+              codeVerifier: codeVerifier,
+              ...(provider === 'naver' && { state: localStorage.getItem('naver_oauth_state') })
             })
           });
         
