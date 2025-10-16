@@ -157,30 +157,53 @@ const SocialAccountLink = () => {
     localStorage.setItem('is_linking_mode', 'true');
     localStorage.setItem('linking_provider', providerId);
     
-    // OAuth 연동 URL로 이동
-    const authUrl = getOAuthAuthUrl(providerId);
-    if (!authUrl) {
-      alert('❌ OAuth 설정을 찾을 수 없습니다.');
-      return;
+    try {
+      // OAuth 설정 가져오기
+      const { getOAuthConfig } = await import('../auth/oauth/providers');
+      const config = getOAuthConfig(providerId as 'google' | 'kakao' | 'naver');
+      
+      if (!config.clientId) {
+        alert(`❌ ${config.name} Client ID가 설정되지 않았습니다.`);
+        return;
+      }
+      
+      // PKCE 파라미터 생성
+      const { generateCodeVerifier, generateCodeChallenge, generateRandomString } = await import('../../utils/pkceUtils');
+      const codeVerifier = generateCodeVerifier();
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+      const state = generateRandomString(32);
+      
+      // PKCE 파라미터를 localStorage에 저장
+      localStorage.setItem(config.storageKeys.codeVerifier, codeVerifier);
+      localStorage.setItem(config.storageKeys.state, state);
+      
+      // OAuth URL 생성
+      const authUrl = new URL(config.authUrl);
+      authUrl.searchParams.set('client_id', config.clientId);
+      authUrl.searchParams.set('redirect_uri', config.redirectUri);
+      authUrl.searchParams.set('response_type', config.responseType);
+      authUrl.searchParams.set('scope', config.scope);
+      authUrl.searchParams.set('code_challenge', codeChallenge);
+      authUrl.searchParams.set('code_challenge_method', config.codeChallengeMethod);
+      authUrl.searchParams.set('state', state);
+      
+      // Google의 경우 추가 파라미터
+      if (providerId === 'google') {
+        authUrl.searchParams.set('access_type', 'offline');
+        authUrl.searchParams.set('prompt', 'consent');
+      }
+      
+      // OAuth 페이지로 이동
+      window.location.href = authUrl.toString();
+    } catch (error) {
+      console.error('❌ OAuth 연동 URL 생성 실패:', error);
+      alert('❌ OAuth 연동 설정 중 오류가 발생했습니다.');
     }
-
-    // 현재 창에서 OAuth 로그인 페이지로 이동
-    window.location.href = authUrl;
   };
 
   const handleEmailLink = async () => {
     // 이메일 연동은 별도 UI 필요 (추후 구현)
     alert('📧 이메일 연동은 추후 구현 예정입니다.');
-  };
-
-  const getOAuthAuthUrl = (providerId: string): string | null => {
-    // OAuth 연동용 URL
-    const configs: Record<string, string> = {
-      'naver': '/link/naver',
-      'kakao': '/link/kakao',
-      'google': '/link/google'
-    };
-    return configs[providerId] || null;
   };
 
   const isProviderLinked = (providerId: string) => {

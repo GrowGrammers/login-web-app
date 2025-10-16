@@ -19,6 +19,7 @@ const API_CONFIGS = {
 
       // Google OAuth 엔드포인트
       googleLogin: '/api/v1/auth/google/login',
+      googleLink: '/api/v1/auth/link/google', // 연동 요청 API
       googleLogout: '/api/v1/auth/members/logout', //소셜 로그아웃 통일 (API 호출 방식)
       googleRefresh: '/api/v1/auth/members/refresh', //토큰 갱신 통일 (소셜+이메일)
       googleValidate: '/api/v1/auth/google/validate',
@@ -26,6 +27,7 @@ const API_CONFIGS = {
 
       // Kakao OAuth 엔드포인트
       kakaoLogin: '/api/v1/auth/kakao/login',
+      kakaoLink: '/api/v1/auth/link/kakao', // 연동 요청 API
       kakaoLogout: '/api/v1/auth/members/logout', //소셜 로그아웃 통일 (API 호출 방식)
       kakaoRefresh: '/api/v1/auth/members/refresh',
       kakaoValidate: '/api/v1/auth/kakao/validate',
@@ -33,6 +35,7 @@ const API_CONFIGS = {
 
       // Naver OAuth 엔드포인트
       naverLogin: '/api/v1/auth/naver/login',
+      naverLink: '/api/v1/auth/link/naver', // 연동 요청 API
       naverLogout: '/api/v1/auth/members/logout', //소셜 로그아웃 통일 (API 호출 방식)
       naverRefresh: '/api/v1/auth/members/refresh',
       naverValidate: '/api/v1/auth/naver/validate',
@@ -56,6 +59,7 @@ const API_CONFIGS = {
 
       // Google OAuth 엔드포인트
       googleLogin: '/api/v1/auth/google/login',
+      googleLink: '/api/v1/auth/link/google', // 연동 요청 API
       googleLogout: '/api/v1/auth/members/logout', //소셜 로그아웃 통일 (API 호출 방식)
       googleRefresh: '/api/v1/auth/members/refresh',
       googleValidate: '/api/v1/auth/google/validate',
@@ -63,6 +67,7 @@ const API_CONFIGS = {
 
       // Kakao OAuth 엔드포인트
       kakaoLogin: '/api/v1/auth/kakao/login',
+      kakaoLink: '/api/v1/auth/link/kakao', // 연동 요청 API
       kakaoLogout: '/api/v1/auth/members/logout', //소셜 로그아웃 통일 (API 호출 방식)
       kakaoRefresh: '/api/v1/auth/members/refresh',
       kakaoValidate: '/api/v1/auth/kakao/validate',
@@ -70,6 +75,7 @@ const API_CONFIGS = {
 
       // Naver OAuth 엔드포인트
       naverLogin: '/api/v1/auth/naver/login',
+      naverLink: '/api/v1/auth/link/naver', // 연동 요청 API
       naverLogout: '/api/v1/auth/members/logout', //소셜 로그아웃 통일 (API 호출 방식)
       naverRefresh: '/api/v1/auth/members/refresh',
       naverValidate: '/api/v1/auth/naver/validate',

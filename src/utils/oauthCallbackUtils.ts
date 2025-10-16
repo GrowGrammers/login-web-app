@@ -41,51 +41,108 @@ export async function handleOAuthProviderCallback(
     // 인가 코드 사용 플래그 설정 (재사용 방지)
     localStorage.setItem(`${provider}_code_used`, 'true');
     
-    // AuthManager 설정 및 로그인 처리
-    const { resetAuthManager } = await import('../auth/authManager');
-    const authManager = resetAuthManager(provider);
+    // 연동 모드인지 확인
+    const isLinkingMode = localStorage.getItem('is_linking_mode');
+    const linkingProvider = localStorage.getItem('linking_provider');
     
-    const result = await authManager.login({
-      provider: provider,
-      authCode: authCode,
-      codeVerifier: codeVerifier
-    });
+    // AuthManager 설정 및 로그인/연동 처리
+    const { resetAuthManager } = await import('../auth/authManager');
+    const { getApiConfig } = await import('../config/auth.config');
+    
+    let result;
+    
+    if (isLinkingMode === 'true') {
+      // 연동 모드: 연동 API 호출
+      const apiConfig = getApiConfig();
+      const apiBaseUrl = apiConfig.apiBaseUrl;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const endpoints = apiConfig.endpoints as any;
+      
+      // 연동 API 엔드포인트
+      const linkEndpoints: Record<string, string> = {
+        google: endpoints.googleLink || '/api/v1/auth/link/google',
+        kakao: endpoints.kakaoLink || '/api/v1/auth/link/kakao',
+        naver: endpoints.naverLink || '/api/v1/auth/link/naver'
+      };
+      
+      const linkEndpoint = linkEndpoints[provider];
+      
+      try {
+        // JWT 토큰 가져오기
+        const { WebTokenStore } = await import('../auth/WebTokenStore');
+        const tokenStore = new WebTokenStore();
+        const tokenResult = await tokenStore.getToken();
+        
+        if (!tokenResult.success || !tokenResult.data) {
+          result = { success: false, message: '로그인 토큰을 찾을 수 없습니다.' };
+          console.error('❌ 연동 API 호출 실패: 토큰 없음');
+        } else {
+          const accessToken = tokenResult.data.accessToken;
+          
+          // 연동 API 호출
+          const response = await fetch(`${apiBaseUrl}${linkEndpoint}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+              'X-Client-Type': 'web'
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              authCode: authCode,
+              codeVerifier: codeVerifier
+            })
+          });
+        
+          const data = await response.json();
+          
+          if (response.ok) {
+            result = { success: true, message: '연동이 완료되었습니다.' };
+          } else {
+            result = { success: false, message: data.message || '연동에 실패했습니다.' };
+            console.error(`❌ ${provider} 연동 실패:`, data);
+          }
+        }
+      } catch (error) {
+        console.error(`❌ ${provider} 연동 API 호출 중 오류:`, error);
+        result = { success: false, message: '연동 중 오류가 발생했습니다.' };
+      }
+    } else {
+      // 일반 로그인 모드: 로그인 API 호출
+      const authManager = resetAuthManager(provider);
+      
+      result = await authManager.login({
+        provider: provider,
+        authCode: authCode,
+        codeVerifier: codeVerifier
+      });
+    }
     
     if (result.success) {
-      setIsAuthenticated(true);
-      initializeTokenRefreshService();
-      setShowSplash(false);
-      
-      // RealHttpClient에서 이미 사용자 정보를 가져오므로 중복 호출 제거
-      // await fetchUserInfoAfterLogin(provider);
-      
-      // 연동 모드인지 확인
-      const isLinkingMode = localStorage.getItem('is_linking_mode');
-      const linkingProvider = localStorage.getItem('linking_provider');
-      
-      console.log(`🔗 OAuth 콜백 완료 - 연동 모드: ${isLinkingMode}, provider: ${linkingProvider}`);
-      
       if (isLinkingMode === 'true') {
-        // 연동 모드면 대시보드로
-        console.log('✅ 연동 모드 → /dashboard로 이동');
-        
-        // 연동 모드 플래그는 여기서 제거 (OAuth 콜백 완료 시점)
+        // 연동 모드: 대시보드로 이동
+        // 연동 모드 플래그 제거
         localStorage.removeItem('is_linking_mode');
         localStorage.removeItem('linking_provider');
         
         // URL 파라미터로 연동 완료된 provider 전달
         navigate(`/dashboard?linked=${linkingProvider || provider}`);
       } else {
-        // 일반 로그인이면 로그인 완료 페이지로
-        console.log('✅ 일반 로그인 → /login/complete로 이동');
+        // 일반 로그인: 로그인 완료 처리
+        setIsAuthenticated(true);
+        initializeTokenRefreshService();
+        setShowSplash(false);
+        
         navigate('/login/complete');
       }
     } else {
-      console.error(`${provider} 로그인 실패:`, result.message);
+      console.error(`${provider} ${isLinkingMode === 'true' ? '연동' : '로그인'} 실패:`, result.message);
       
       // 사용자에게 오류 알림 표시
-      const errorMessage = result.message || '로그인에 실패했습니다.';
-      alert(`❌ ${provider} 로그인 실패\n\n${errorMessage}\n\n다시 시도해주세요.`);
+      const errorType = isLinkingMode === 'true' ? '연동' : '로그인';
+      const errorMessage = result.message || `${errorType}에 실패했습니다.`;
+      alert(`❌ ${provider} ${errorType} 실패\n\n${errorMessage}\n\n다시 시도해주세요.`);
       
       // 로그인 페이지로 리다이렉트
       navigate('/start');

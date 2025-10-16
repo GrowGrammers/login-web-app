@@ -66,11 +66,18 @@ const OAuthCallback = ({ provider }: OAuthCallbackProps) => {
             return;
           }
           
-          // OAuth 진행 중인지 확인
+          // OAuth 진행 중인지 확인 (일반 로그인 또는 연동 모드)
           const oauthInProgress = localStorage.getItem('oauth_in_progress');
           const oauthProvider = localStorage.getItem('oauth_provider');
+          const isLinkingMode = localStorage.getItem('is_linking_mode');
+          const linkingProvider = localStorage.getItem('linking_provider');
           
-          if (oauthInProgress !== 'true' || oauthProvider !== provider) {
+          // 일반 로그인 모드 체크
+          const isNormalLogin = oauthInProgress === 'true' && oauthProvider === provider;
+          // 연동 모드 체크
+          const isLinking = isLinkingMode === 'true' && linkingProvider === provider;
+          
+          if (!isNormalLogin && !isLinking) {
             console.warn(`⚠️ ${config.name} OAuth가 진행 중이 아닙니다. 메인 페이지로 이동합니다.`);
             setTimeout(() => {
               navigate('/', { replace: true });
@@ -78,13 +85,15 @@ const OAuthCallback = ({ provider }: OAuthCallbackProps) => {
             return;
           }
           
-          if (oauthInProgress === 'true' && oauthProvider === provider) {
+          if (isNormalLogin || isLinking) {
             // 인가 코드 재사용 방지: 이미 처리된 코드인지 확인
             const existingCode = localStorage.getItem(config.storageKeys.authCode);
             if (existingCode === code) {
               console.warn(`⚠️ 이미 처리된 ${config.name} 인가 코드입니다. 중복 처리 방지`);
               localStorage.removeItem('oauth_in_progress');
               localStorage.removeItem('oauth_provider');
+              localStorage.removeItem('is_linking_mode');
+              localStorage.removeItem('linking_provider');
               setTimeout(() => {
                 navigate('/', { replace: true });
               }, 1000);
@@ -93,8 +102,13 @@ const OAuthCallback = ({ provider }: OAuthCallbackProps) => {
             
             // localStorage에 인증 코드 저장하고 메인 페이지로 리다이렉트
             localStorage.setItem(config.storageKeys.authCode, code);
-            localStorage.removeItem('oauth_in_progress');
-            localStorage.removeItem('oauth_provider');
+            
+            // 일반 로그인 모드 플래그 제거
+            if (isNormalLogin) {
+              localStorage.removeItem('oauth_in_progress');
+              localStorage.removeItem('oauth_provider');
+            }
+            // 연동 모드 플래그는 oauthCallbackUtils에서 제거하므로 여기서는 유지
             
             // 인가 코드 사용 플래그 설정 (재사용 방지)
             localStorage.setItem(config.storageKeys.codeUsed, 'false');
