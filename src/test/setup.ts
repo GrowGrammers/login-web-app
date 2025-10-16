@@ -1,12 +1,13 @@
 import '@testing-library/jest-dom'
-import { vi } from 'vitest'
+import { vi, afterEach } from 'vitest'
+import { cleanup } from '@testing-library/react'
 
 
 // Mock window.location
 Object.defineProperty(window, 'location', {
   value: {
-    href: 'http://localhost:3000',
-    origin: 'http://localhost:3000',
+    href: 'http://localhost:5173',
+    origin: 'http://localhost:5173',
     pathname: '/',
     search: '',
     hash: '',
@@ -60,11 +61,11 @@ global.URL = class URL {
   constructor(url: string) {
     // Simple URL mock
     this.href = url
-    this.origin = 'http://localhost:3000'
+    this.origin = 'http://localhost:5173'
     this.protocol = 'http:'
-    this.host = 'localhost:3000'
+    this.host = 'localhost:5173'
     this.hostname = 'localhost'
-    this.port = '3000'
+    this.port = '5173'
     this.pathname = '/'
     this.search = ''
     this.hash = ''
@@ -84,3 +85,52 @@ global.URL = class URL {
     return this.href
   }
 } as unknown as typeof URL
+
+// Mock URLSearchParams for webidl-conversions
+global.URLSearchParams = class URLSearchParams {
+  private params: Map<string, string> = new Map()
+  
+  constructor(init?: string | URLSearchParams | Record<string, string> | string[][]) {
+    if (init) {
+      if (typeof init === 'string') {
+        // Parse query string
+        const pairs = init.split('&')
+        for (const pair of pairs) {
+          const [key, value] = pair.split('=')
+          if (key) {
+            this.params.set(decodeURIComponent(key), decodeURIComponent(value || ''))
+          }
+        }
+      }
+    }
+  }
+  
+  get(name: string): string | null {
+    return this.params.get(name) || null
+  }
+  
+  set(name: string, value: string): void {
+    this.params.set(name, value)
+  }
+  
+  has(name: string): boolean {
+    return this.params.has(name)
+  }
+  
+  delete(name: string): void {
+    this.params.delete(name)
+  }
+  
+  toString(): string {
+    const pairs: string[] = []
+    for (const [key, value] of this.params) {
+      pairs.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    }
+    return pairs.join('&')
+  }
+} as unknown as typeof URLSearchParams
+
+// Clean up after each test
+afterEach(() => {
+  cleanup()
+})

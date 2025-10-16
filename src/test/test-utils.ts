@@ -1,6 +1,6 @@
 import { type ReactElement } from 'react'
 import { render, type RenderOptions } from '@testing-library/react'
-import { vi } from 'vitest'
+import { vi, afterEach } from 'vitest'
 
 // Mock auth store
 const mockAuthStore = {
@@ -37,7 +37,16 @@ vi.mock('react-router-dom', async () => {
 const customRender = (
   ui: ReactElement,
   options?: Omit<RenderOptions, 'wrapper'>
-) => render(ui, { ...options })
+) => {
+  const result = render(ui, { ...options })
+  
+  // Clean up after each test
+  afterEach(() => {
+    result.unmount()
+  })
+  
+  return result
+}
 
 // Mock API responses
 export const mockApiResponse = (data: unknown, status = 200) => ({
