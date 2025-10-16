@@ -161,7 +161,7 @@ const OAuthCallback = ({ provider }: OAuthCallbackProps) => {
     };
 
     handleOAuthCallback();
-  }, [location.pathname, provider, config, navigate]);
+  }, [location.pathname, location.hash, location.search, provider, config, navigate]);
 
   return (
     <div style={{
