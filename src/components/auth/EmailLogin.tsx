@@ -1,19 +1,23 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { getAuthManager, resetAuthManager } from '../../auth/authManager';
+import { useNavigate } from 'react-router-dom';
+import { getAuthManager, resetAuthManager, createEmailAuthManager } from '../../auth/authManager';
 import { BottomSheet } from '../layout';
 import { validateEmailWithAlert } from '../../utils/emailValidationUtils';
 import { INPUT_STYLES, BUTTON_STYLES } from '../../styles';
+import { useAuthStore } from '../../stores/authStore';
 
 interface EmailLoginProps {
   onLoginSuccess: () => void;
   onStepChange?: (step: 'email' | 'verification') => void;
+  isLinkMode?: boolean; // 연동 모드 여부
 }
 
 export interface EmailLoginRef {
   resetForm: () => void;
 }
 
-const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess, onStepChange }, ref) => {
+const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess, onStepChange, isLinkMode = false }, ref) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     verifyCode: ''
@@ -141,14 +145,18 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
 
   // AuthManager 초기화
   useEffect(() => {
-    resetAuthManager('email');
+    // 연동 모드가 아닐 때만 resetAuthManager 호출
+    // 연동 모드에서는 기존 provider를 유지해야 함
+    if (!isLinkMode) {
+      resetAuthManager('email');
+    }
     setStep('email');
     setMessage('');
     setFormData({ email: '', verifyCode: '' });
     setTimeLeft(300);
     setIsTimerExpired(false);
     clearTimer();
-  }, []);
+  }, [isLinkMode]);
 
   // step 변경 시 부모 컴포넌트에 알림
   useEffect(() => {
@@ -180,7 +188,9 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
     setFormData(prev => ({ ...prev, verifyCode: '' }));
 
     try {
-      const authManager = getAuthManager();
+      // 이메일 인증 요청은 항상 EmailAuthManager를 사용해야 함
+      // (네이버/카카오/구글로 로그인한 상태에서 이메일 연동 시에도 동일)
+      const authManager = createEmailAuthManager();
       const result = await authManager.requestEmailVerification({
         email: formData.email
       });
@@ -211,49 +221,116 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
       setIsLoading(true);
       setMessage('');
       
-      const authManager = getAuthManager();
-      const result = await authManager.login({
-        provider: 'email',
-        email: formData.email,
-        verifyCode: formData.verifyCode
-      });
-
-      if (result.success) {
-        setMessage('✅ 로그인 성공!');
-        
-        // 로그인 성공 후 토큰이 저장될 때까지 대기
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // 토큰이 제대로 저장되었는지 확인
+      if (isLinkMode) {
+        // 연동 모드: /api/v1/auth/link/email-login으로 JWT 헤더와 함께 요청
         const { WebTokenStore } = await import('../../auth/WebTokenStore');
         const tokenStore = new WebTokenStore();
-        // RealHttpClient에서 이미 토큰을 저장했으므로 추가 처리 불필요
-        // 토큰이 제대로 저장되었는지 확인만 함
         const tokenResult = await tokenStore.getToken();
-        if (!tokenResult.success || !tokenResult.data?.accessToken) {
-          console.warn('⚠️ 토큰이 저장되지 않았습니다. RealHttpClient에서 처리되었는지 확인하세요.');
+        
+        if (!tokenResult.success || !tokenResult.data) {
+          setMessage('❌ 로그인 토큰을 찾을 수 없습니다.');
+          return;
         }
         
-        onLoginSuccess();
-      } else {
-        // EMAIL_EXPIRED 에러 처리 (410 상태 코드)
-        if (result.message?.includes('이메일 인증 시간이 만료되었습니다')) {
-          setMessage('❌ 인증번호가 만료되었습니다. 새로운 인증번호를 받아주세요.');
-          setIsBackendExpired(true);
-          setIsTimerExpired(true);
-          clearTimer();
-          setTimeLeft(0);
-          // 인증번호 입력 필드 초기화
-          setVerificationDigits(['', '', '', '', '', '']);
-          setFormData(prev => ({ ...prev, verifyCode: '' }));
+        const accessToken = tokenResult.data.accessToken;
+        const { getApiConfig } = await import('../../config/auth.config');
+        const apiConfig = getApiConfig();
+        const apiBaseUrl = apiConfig.apiBaseUrl;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const endpoints = apiConfig.endpoints as any;
+        const linkEndpoint = endpoints.emailLink || '/api/v1/auth/link/email-login';
+        
+        const response = await fetch(`${apiBaseUrl}${linkEndpoint}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+            'X-Client-Type': 'web'
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            email: formData.email,
+            verifyCode: formData.verifyCode
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          setMessage('✅ 이메일 연동 성공!');
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // 사용자 정보 새로고침
+          const authManager = getAuthManager();
+          const userInfoResult = await authManager.getCurrentUserInfo();
+          if (userInfoResult.success && userInfoResult.data) {
+            useAuthStore.getState().setUserInfo(userInfoResult.data);
+          }
+          
+          // 대시보드로 리다이렉트
+          navigate('/dashboard?linked=email');
         } else {
-          setMessage(`❌ ${result.message}`);
+          // EMAIL_EXPIRED 에러 처리
+          if (data.message?.includes('이메일 인증 시간이 만료되었습니다') || response.status === 410) {
+            setMessage('❌ 인증번호가 만료되었습니다. 새로운 인증번호를 받아주세요.');
+            setIsBackendExpired(true);
+            setIsTimerExpired(true);
+            clearTimer();
+            setTimeLeft(0);
+            setVerificationDigits(['', '', '', '', '', '']);
+            setFormData(prev => ({ ...prev, verifyCode: '' }));
+          } else {
+            setMessage(`❌ ${data.message || '연동에 실패했습니다.'}`);
+          }
+          console.error('❌ 이메일 연동 실패:', data);
         }
-        console.error('❌ 로그인 실패:', result.error);
+      } else {
+        // 일반 로그인 모드
+        const authManager = getAuthManager();
+        const result = await authManager.login({
+          provider: 'email',
+          email: formData.email,
+          verifyCode: formData.verifyCode
+        });
+
+        if (result.success) {
+          setMessage('✅ 로그인 성공!');
+          
+          // 로그인 성공 후 토큰이 저장될 때까지 대기
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // 토큰이 제대로 저장되었는지 확인
+          const { WebTokenStore } = await import('../../auth/WebTokenStore');
+          const tokenStore = new WebTokenStore();
+          // RealHttpClient에서 이미 토큰을 저장했으므로 추가 처리 불필요
+          // 토큰이 제대로 저장되었는지 확인만 함
+          const tokenResult = await tokenStore.getToken();
+          if (!tokenResult.success || !tokenResult.data?.accessToken) {
+            console.warn('⚠️ 토큰이 저장되지 않았습니다. RealHttpClient에서 처리되었는지 확인하세요.');
+          }
+          
+          onLoginSuccess();
+        } else {
+          // EMAIL_EXPIRED 에러 처리 (410 상태 코드)
+          if (result.message?.includes('이메일 인증 시간이 만료되었습니다')) {
+            setMessage('❌ 인증번호가 만료되었습니다. 새로운 인증번호를 받아주세요.');
+            setIsBackendExpired(true);
+            setIsTimerExpired(true);
+            clearTimer();
+            setTimeLeft(0);
+            // 인증번호 입력 필드 초기화
+            setVerificationDigits(['', '', '', '', '', '']);
+            setFormData(prev => ({ ...prev, verifyCode: '' }));
+          } else {
+            setMessage(`❌ ${result.message}`);
+          }
+          console.error('❌ 로그인 실패:', result.error);
+        }
       }
     } catch (error) {
-      setMessage('❌ 로그인 중 오류가 발생했습니다.');
-      console.error('❌ 로그인 중 오류:', error);
+      setMessage(isLinkMode ? '❌ 연동 중 오류가 발생했습니다.' : '❌ 로그인 중 오류가 발생했습니다.');
+      console.error(isLinkMode ? '❌ 연동 중 오류:' : '❌ 로그인 중 오류:', error);
     } finally {
       setIsLoading(false);
     }
@@ -284,8 +361,12 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
       <div className="px-8 py-16 pb-4 text-left">
         {step === 'email' ? (
           <>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">이메일로 계속하기</h2>
-            <p className="text-sm text-gray-600">이메일로 로그인하거나 가입하세요</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              {isLinkMode ? '이메일 연동하기' : '이메일로 계속하기'}
+            </h2>
+            <p className="text-sm text-gray-600">
+              {isLinkMode ? '이메일로 로그인 방식을 연동하세요' : '이메일로 로그인하거나 가입하세요'}
+            </p>
           </>
         ) : (
           <>
@@ -391,7 +472,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
                     disabled={isLoading || formData.verifyCode.length !== 6}
                     className={BUTTON_STYLES.large}
                   >
-                    계속하기
+                    {isLinkMode ? '연동하기' : '계속하기'}
                   </button>
                 )}
               </div>

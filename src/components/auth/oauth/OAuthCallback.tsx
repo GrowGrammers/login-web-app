@@ -122,7 +122,7 @@ const OAuthCallback = ({ provider }: OAuthCallbackProps) => {
               window.opener.postMessage({
                 type: 'OAUTH_SUCCESS',
                 code: code
-              }, location.origin || window.location.origin);
+              }, window.location.origin);
               
               setTimeout(() => {
                 window.close();

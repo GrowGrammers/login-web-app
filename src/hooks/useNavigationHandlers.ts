@@ -25,6 +25,7 @@ export const useNavigationHandlers = (
         if (location.pathname !== '/login/complete' && 
             location.pathname !== '/dashboard' && 
             location.pathname !== '/service' &&
+            location.pathname !== '/link/email' &&
             !location.pathname.startsWith('/link/') &&
             !location.pathname.startsWith('/auth/')) {
           // 연동 모드면 대시보드로, 아니면 로그인 완료 페이지로

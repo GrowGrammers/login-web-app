@@ -11,6 +11,7 @@ const API_CONFIGS = {
       requestVerification: '/api/v1/auth/email/request',
       verifyEmail: '/api/v1/auth/email/verify',
       login: '/api/v1/auth/members/email-login',
+      emailLink: '/api/v1/auth/link/email-login', // 이메일 연동 API
       logout: '/api/v1/auth/members/logout',
       refresh: '/api/v1/auth/members/refresh',
       validate: '/api/v1/auth/validate-token',
@@ -51,6 +52,7 @@ const API_CONFIGS = {
       requestVerification: '/api/v1/auth/email/request',
       verifyEmail: '/api/v1/auth/email/verify',
       login: '/api/v1/auth/members/email-login',
+      emailLink: '/api/v1/auth/link/email-login', // 이메일 연동 API
       logout: '/api/v1/auth/members/logout',
       refresh: '/api/v1/auth/members/refresh',
       validate: '/api/v1/auth/validate-token',

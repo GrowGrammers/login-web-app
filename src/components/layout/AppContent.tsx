@@ -72,6 +72,7 @@ const AppContent = () => {
           <Route path="/login/complete" element={<LoginComplete />} />
           <Route path="/dashboard" element={<Dashboard onLogout={() => handleLogout(setShowSplash)} />} />
           <Route path="/service" element={<ServiceMain />} />
+          <Route path="/link/email" element={<EmailLogin ref={emailLoginRef} onLoginSuccess={handleLoginSuccess} onStepChange={setEmailLoginStep} isLinkMode={true} />} />
           <Route path="/link/google" element={<GoogleLogin />} />
           <Route path="/link/kakao" element={<KakaoLogin />} />
           <Route path="/link/naver" element={<NaverLogin />} />

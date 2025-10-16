@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { getAuthManager, getCurrentProviderType } from '../../../../auth/authManager';
 import { useAuthStore } from '../../../../stores/authStore';
 import { CARD_STYLES } from '../../../../styles';
@@ -73,6 +73,7 @@ const ToggleSwitch = ({ isOn, disabled, onClick }: ToggleSwitchProps) => {
 
 const SocialAccountLink = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentProvider = getCurrentProviderType();
   const userInfo = useAuthStore((state) => state.userInfo);
   const [linkedProviders, setLinkedProviders] = useState<string[]>([]);
@@ -99,7 +100,16 @@ const SocialAccountLink = () => {
       // URL 파라미터 제거
       window.history.replaceState({}, '', '/dashboard');
       
-      alert(`✅ ${justLinked} 연동이 완료되었습니다!`);
+      // 연동된 provider에 따라 한글 이름 표시
+      const providerNames: Record<string, string> = {
+        email: '이메일',
+        google: '구글',
+        kakao: '카카오',
+        naver: '네이버'
+      };
+      const providerName = providerNames[justLinked] || justLinked;
+      
+      alert(`✅ ${providerName} 연동이 완료되었습니다!`);
       
       // 연동 완료 후 사용자 정보 다시 가져오기 (연동된 provider 목록 업데이트)
       const fetchUserInfo = async () => {
@@ -169,8 +179,8 @@ const SocialAccountLink = () => {
   };
 
   const handleEmailLink = async () => {
-    // 이메일 연동은 별도 UI 필요 (추후 구현)
-    alert('📧 이메일 연동은 추후 구현 예정입니다.');
+    // 이메일 연동 페이지로 이동
+    navigate('/link/email');
   };
 
   const isProviderLinked = (providerId: string) => {

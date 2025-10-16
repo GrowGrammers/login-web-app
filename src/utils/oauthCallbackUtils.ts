@@ -169,6 +169,9 @@ export async function handleOAuthProviderCallback(
     localStorage.removeItem(`${provider}_oauth_state`);
     localStorage.removeItem(`${provider}_code_used`); // 인가 코드 사용 플래그도 삭제
     localStorage.removeItem('oauth_processing');
+    // 연동 모드 플래그도 제거 (실패 시에도 정리)
+    localStorage.removeItem('is_linking_mode');
+    localStorage.removeItem('linking_provider');
     globalOAuthProcessing.value = false;
   }
 }
