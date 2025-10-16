@@ -61,9 +61,9 @@ export class RealHttpClient implements HttpClient {
       // GET/HEAD는 바디 금지
       const skipBody = isBodylessMethod(method);
       
-      // 네이버 로그인 요청인 경우 state 추가
+      // 네이버 로그인/연동 요청인 경우 state 추가
       let finalBody = body;
-      if (!skipBody && url.includes('/auth/naver/login') && body && typeof body === 'object') {
+      if (!skipBody && (url.includes('/auth/naver/login') || url.includes('/auth/link/naver')) && body && typeof body === 'object') {
         const naverState = localStorage.getItem('naver_oauth_state');
         if (naverState) {
           finalBody = {
@@ -117,8 +117,8 @@ export class RealHttpClient implements HttpClient {
       
       
 
-      // 로그인 및 토큰 갱신 응답의 Authorization 헤더에서 토큰 추출 (이메일, Google, Kakao, Naver, Refresh 공통)
-      if ((url.includes('/auth/email/login') || url.includes('/auth/members/email-login') || url.includes('/auth/google/login') || url.includes('/auth/kakao/login') || url.includes('/auth/naver/login') || url.includes('/auth/refresh') || url.includes('/auth/members/refresh')) && response.ok && authHeaderValue) {
+      // 로그인, 연동 및 토큰 갱신 응답의 Authorization 헤더에서 토큰 추출 (이메일, Google, Kakao, Naver, Link, Refresh 공통)
+      if ((url.includes('/auth/email/login') || url.includes('/auth/members/email-login') || url.includes('/auth/google/login') || url.includes('/auth/kakao/login') || url.includes('/auth/naver/login') || url.includes('/auth/link/google') || url.includes('/auth/link/kakao') || url.includes('/auth/link/naver') || url.includes('/auth/link/email-login') || url.includes('/auth/refresh') || url.includes('/auth/members/refresh')) && response.ok && authHeaderValue) {
         // Authorization 헤더에서 Bearer 토큰 추출
         const authHeader = authHeaderValue;
         if (authHeader.startsWith('Bearer ')) {

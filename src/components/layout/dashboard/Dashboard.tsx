@@ -1,10 +1,17 @@
 import { useState, useEffect } from 'react';
-import { getAuthManager, getCurrentProviderType } from '../../auth/authManager';
-import { getTokenRefreshService } from '../../auth/TokenRefreshService';
-import { isJWTExpired } from '../../utils/jwtUtils';
-import { useAuthStatus } from '../../hooks';
-import { useAuthStore } from '../../stores/authStore';
-import { BUTTON_STYLES, CARD_STYLES, LOADING_STYLES } from '../../styles';
+import { getAuthManager, getCurrentProviderType } from '../../../auth/authManager';
+import { getTokenRefreshService } from '../../../auth/TokenRefreshService';
+import { isJWTExpired } from '../../../utils/jwtUtils';
+import { useAuthStatus } from '../../../hooks';
+import { useAuthStore } from '../../../stores/authStore';
+import { BUTTON_STYLES, LOADING_STYLES } from '../../../styles';
+import {
+  SocialAccountLink,
+  UserInfoSection,
+  TokenInfoSection,
+  AutoTokenRefreshSection,
+  TokenManagementSection
+} from './sections';
 
 // HttpOnly 쿠키는 JavaScript에서 접근할 수 없으므로 쿠키 읽기 함수는 사용하지 않음
 
@@ -92,15 +99,12 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
             }
           } catch (directApiError) {
             console.warn('⚠️ 쿠키 기반 사용자 정보 가져오기도 실패, 더미 데이터 사용:', directApiError);
-            const currentProvider = getCurrentProviderType();
             // 더미 사용자 정보 설정
             const dummyUserInfo = {
               id: 'demo-user',
-              email: currentProvider === 'google' ? 'demo@gmail.com' : 
-                     currentProvider === 'kakao' ? 'demo@kakao.com' : 'demo@example.com',
-              nickname: currentProvider === 'google' ? 'Google 데모 사용자' : 
-                       currentProvider === 'kakao' ? 'Kakao 데모 사용자' : '이메일 데모 사용자',
-              provider: getCurrentProviderType()
+              email: 'demo@example.com',
+              nickname: '데모 사용자',
+              provider: 'unknown'
             };
             // 일원화된 메서드로 저장 (localStorage 접근 일원화)
             useAuthStore.getState().setUserInfo(dummyUserInfo);
@@ -108,15 +112,12 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         }
       } catch (userError) {
         console.warn('⚠️ 사용자 정보 API 오류, 더미 데이터 사용:', userError);
-        const currentProvider = getCurrentProviderType();
         // 더미 사용자 정보 설정
         const dummyUserInfo = {
           id: 'demo-user',
-          email: currentProvider === 'google' ? 'demo@gmail.com' : 
-                 currentProvider === 'kakao' ? 'demo@kakao.com' : 'demo@example.com',
-          nickname: currentProvider === 'google' ? 'Google 데모 사용자' : 
-                   currentProvider === 'kakao' ? 'Kakao 데모 사용자' : '이메일 데모 사용자',
-          provider: getCurrentProviderType()
+          email: 'demo@example.com',
+          nickname: '데모 사용자',
+          provider: 'unknown'
         };
         // 일원화된 메서드로 저장 (localStorage 접근 일원화)
         useAuthStore.getState().setUserInfo(dummyUserInfo);
@@ -240,126 +241,19 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       </div>
 
       <div className="flex-1 p-6 max-w-3xl mx-auto w-full">
-        {/* 사용자 정보 */}
-        <div className={CARD_STYLES.withHeader}>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">👤 사용자 정보</h3>
-          {userInfo ? (
-            <div>
-              {userInfo.id === 'demo-user' && (
-                <div className="bg-yellow-50 text-yellow-800 p-2 rounded-md mb-4 text-xs text-center">
-                  <small>🔧 백엔드 미완성으로 더미 데이터를 표시합니다</small>
-                </div>
-              )}
-              <p className="my-3 text-sm flex justify-between items-center">
-                <strong className="text-gray-900 font-semibold min-w-[80px]">이메일:</strong> 
-                {userInfo.email}
-              </p>
-              <p className="my-3 text-sm flex justify-between items-center">
-                <strong className="text-gray-900 font-semibold min-w-[80px]">닉네임:</strong> 
-                {userInfo.nickname || '설정되지 않음'}
-              </p>
-              <p className="my-3 text-sm flex justify-between items-center">
-                <strong className="text-gray-900 font-semibold min-w-[80px]">Provider:</strong> 
-                {getCurrentProviderType()}
-              </p>
-            </div>
-          ) : (
-            <div className="text-center text-gray-600 p-8">
-              <p>⚠️ 사용자 정보를 불러올 수 없습니다.</p>
-              <button 
-                onClick={loadUserData} 
-                className={`${BUTTON_STYLES.small} mt-4`}
-              >
-                🔄 다시 시도
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* 토큰 정보 */}
-        <div className={CARD_STYLES.withHeader}>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">🔑 토큰 정보</h3>
-          {tokenInfo ? (
-            <div>
-              <p className="my-3 text-sm flex justify-between items-center">
-                <strong className="text-gray-900 font-semibold min-w-[80px]">Access Token:</strong> 
-                <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono max-w-[200px] overflow-hidden text-ellipsis">
-                  {tokenInfo.accessToken !== '토큰 없음' ? tokenInfo.accessToken.substring(0, 20) + '...' : '토큰 없음'}
-                </code>
-              </p>
-              <p className="my-3 text-sm flex justify-between items-center">
-                <strong className="text-gray-900 font-semibold min-w-[80px]">Refresh Token (쿠키):</strong> 
-                <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">
-                  🍪 HttpOnly 쿠키 (JS 접근 불가, 네트워크 탭에서 확인됨)
-                </span>
-              </p>
-              {tokenExpiredAt && (
-                <p className="my-3 text-sm flex justify-between items-center">
-                  <strong className="text-gray-900 font-semibold min-w-[80px]">만료 시간:</strong> 
-                  {new Date(tokenExpiredAt).toLocaleString()}
-                </p>
-              )}
-              {timeUntilExpiry !== null && (
-                <p className="my-3 text-sm flex justify-between items-center">
-                  <strong className="text-gray-900 font-semibold min-w-[80px]">남은 시간:</strong> 
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    timeUntilExpiry <= 5 
-                      ? 'bg-red-100 text-red-800' 
-                      : timeUntilExpiry <= 10
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-green-100 text-green-800'
-                  }`}>
-                    {timeUntilExpiry <= 0 ? '만료됨' : `${timeUntilExpiry}분 남음`}
-                  </span>
-                </p>
-              )}
-              <div className="text-xs text-gray-600 mt-4 p-3 bg-blue-50 rounded-lg">
-                <small>💡 refreshToken은 보안상 HttpOnly 쿠키로 설정되어 JavaScript에서 접근할 수 없습니다. 이는 정상적인 보안 정책입니다.</small>
-              </div>
-            </div>
-          ) : (
-            <p>⚠️ 토큰 정보를 불러올 수 없습니다.</p>
-          )}
-        </div>
-
-        {/* 자동 토큰 갱신 상태 */}
-        <div className={CARD_STYLES.withHeader}>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">🤖 자동 토큰 갱신</h3>
-          <div className="text-sm text-gray-600 space-y-3">
-            <div className="bg-green-50 p-3 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                <strong className="text-green-800">활성화됨</strong>
-              </div>
-              <ul className="text-xs text-green-700 space-y-1 ml-4">
-                <li>• 토큰 만료 5분 전에 자동 갱신</li>
-                <li>• 1분마다 토큰 상태 확인</li>
-                <li>• API 요청 전 자동 토큰 검증</li>
-                <li>• 갱신 실패 시 자동 로그아웃</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* 토큰 관리 */}
-        <div className={CARD_STYLES.withHeader}>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">🔧 수동 토큰 관리</h3>
-          <div className="flex flex-col gap-3">
-            <button 
-              onClick={handleRefreshToken} 
-              disabled={isRefreshing}
-              className={`w-full p-3 ${BUTTON_STYLES.primary}`}
-            >
-              {isRefreshing ? '⏳ 갱신 중...' : '🔄 즉시 토큰 갱신'}
-            </button>
-            <button 
-              onClick={handleTokenValidation}
-              className={`w-full p-3 ${BUTTON_STYLES.primary}`}
-            >
-              ✅ 토큰 검증
-            </button>
-          </div>
-        </div>
+        <UserInfoSection userInfo={userInfo} loadUserData={loadUserData} />
+        <SocialAccountLink />
+        <TokenInfoSection 
+          tokenInfo={tokenInfo} 
+          tokenExpiredAt={tokenExpiredAt} 
+          timeUntilExpiry={timeUntilExpiry} 
+        />
+        <AutoTokenRefreshSection />
+        <TokenManagementSection 
+          handleRefreshToken={handleRefreshToken}
+          handleTokenValidation={handleTokenValidation}
+          isRefreshing={isRefreshing}
+        />
       </div>
     </div>
   );

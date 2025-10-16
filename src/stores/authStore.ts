@@ -16,6 +16,7 @@ export interface UserInfo {
   email: string;
   nickname?: string;
   provider: string;
+  linkedProviders?: string[]; // 백엔드에서 받은 연동된 provider 목록
 }
 
 interface AuthState {

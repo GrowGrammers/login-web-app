@@ -193,8 +193,10 @@ export class TokenRefreshService {
       // 토큰 삭제
       await authManager.clear();
       
-      // 로그인 페이지로 리다이렉트
+      // 로그인 페이지로 리다이렉트 (SPA 환경에서는 navigate 사용 권장)
       if (window.location.pathname !== '/') {
+        // SPA 환경에서는 React Router의 navigate를 사용하는 것이 좋지만,
+        // 이 서비스는 React 컴포넌트 외부에서 실행되므로 window.location 사용
         window.location.href = '/';
       }
     } catch (error) {
