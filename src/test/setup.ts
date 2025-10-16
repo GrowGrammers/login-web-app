@@ -57,7 +57,7 @@ window.alert = vi.fn()
 
 // Mock URL constructor for webidl-conversions
 global.URL = class URL {
-  constructor(url: string, base?: string) {
+  constructor(url: string) {
     // Simple URL mock
     this.href = url
     this.origin = 'http://localhost:3000'
@@ -83,4 +83,4 @@ global.URL = class URL {
   toString() {
     return this.href
   }
-} as any
+} as unknown as typeof URL
