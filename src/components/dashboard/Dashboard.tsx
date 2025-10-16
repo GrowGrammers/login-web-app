@@ -93,15 +93,12 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
             }
           } catch (directApiError) {
             console.warn('⚠️ 쿠키 기반 사용자 정보 가져오기도 실패, 더미 데이터 사용:', directApiError);
-            const currentProvider = getCurrentProviderType();
             // 더미 사용자 정보 설정
             const dummyUserInfo = {
               id: 'demo-user',
-              email: currentProvider === 'google' ? 'demo@gmail.com' : 
-                     currentProvider === 'kakao' ? 'demo@kakao.com' : 'demo@example.com',
-              nickname: currentProvider === 'google' ? 'Google 데모 사용자' : 
-                       currentProvider === 'kakao' ? 'Kakao 데모 사용자' : '이메일 데모 사용자',
-              provider: getCurrentProviderType()
+              email: 'demo@example.com',
+              nickname: '데모 사용자',
+              provider: 'unknown'
             };
             // 일원화된 메서드로 저장 (localStorage 접근 일원화)
             useAuthStore.getState().setUserInfo(dummyUserInfo);
@@ -109,15 +106,12 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         }
       } catch (userError) {
         console.warn('⚠️ 사용자 정보 API 오류, 더미 데이터 사용:', userError);
-        const currentProvider = getCurrentProviderType();
         // 더미 사용자 정보 설정
         const dummyUserInfo = {
           id: 'demo-user',
-          email: currentProvider === 'google' ? 'demo@gmail.com' : 
-                 currentProvider === 'kakao' ? 'demo@kakao.com' : 'demo@example.com',
-          nickname: currentProvider === 'google' ? 'Google 데모 사용자' : 
-                   currentProvider === 'kakao' ? 'Kakao 데모 사용자' : '이메일 데모 사용자',
-          provider: getCurrentProviderType()
+          email: 'demo@example.com',
+          nickname: '데모 사용자',
+          provider: 'unknown'
         };
         // 일원화된 메서드로 저장 (localStorage 접근 일원화)
         useAuthStore.getState().setUserInfo(dummyUserInfo);
@@ -258,10 +252,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               <p className="my-3 text-sm flex justify-between items-center">
                 <strong className="text-gray-900 font-semibold min-w-[80px]">닉네임:</strong> 
                 {userInfo.nickname || '설정되지 않음'}
-              </p>
-              <p className="my-3 text-sm flex justify-between items-center">
-                <strong className="text-gray-900 font-semibold min-w-[80px]">Provider:</strong> 
-                {getCurrentProviderType()}
               </p>
             </div>
           ) : (

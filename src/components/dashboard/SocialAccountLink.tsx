@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCurrentProviderType, getAuthManager } from '../../auth/authManager';
+import { getAuthManager, getCurrentProviderType } from '../../auth/authManager';
 import { useAuthStore } from '../../stores/authStore';
 import { CARD_STYLES } from '../../styles';
 
@@ -73,14 +73,16 @@ const ToggleSwitch = ({ isOn, disabled, onClick }: ToggleSwitchProps) => {
 const SocialAccountLink = () => {
   const currentProvider = getCurrentProviderType();
   const userInfo = useAuthStore((state) => state.userInfo);
-  const [linkedProviders, setLinkedProviders] = useState<string[]>([currentProvider]);
+  const [linkedProviders, setLinkedProviders] = useState<string[]>([]);
   const [isLinking, setIsLinking] = useState<string | null>(null);
 
   // 백엔드에서 받은 회원정보로 연동된 provider 목록 업데이트
   useEffect(() => {
     if (userInfo && userInfo.linkedProviders) {
+      // 백엔드에서 linkedProviders 배열을 제공하면 그대로 사용
       setLinkedProviders(userInfo.linkedProviders);
     } else {
+      // linkedProviders가 없으면 현재 로그인한 provider만 연동된 것으로 처리
       setLinkedProviders([currentProvider]);
     }
   }, [userInfo, currentProvider]);
