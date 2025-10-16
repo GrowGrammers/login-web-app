@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { getAuthManager, getCurrentProviderType } from '../../auth/authManager';
-import { useAuthStore } from '../../stores/authStore';
-import { CARD_STYLES } from '../../styles';
+import { getAuthManager, getCurrentProviderType } from '../../../../auth/authManager';
+import { useAuthStore } from '../../../../stores/authStore';
+import { CARD_STYLES } from '../../../../styles';
 
 interface SocialProvider {
   id: string;
@@ -157,7 +157,7 @@ const SocialAccountLink = () => {
   const handleOAuthLink = async (providerId: string) => {
     try {
       // 공통 OAuth 플로우 시작 (연동 모드)
-      const { initiateOAuthFlow } = await import('../../utils/oauthUtils');
+      const { initiateOAuthFlow } = await import('../../../../utils/oauthUtils');
       await initiateOAuthFlow(providerId as 'google' | 'kakao' | 'naver', 'link');
     } catch (error) {
       console.error('❌ OAuth 연동 시작 실패:', error);
