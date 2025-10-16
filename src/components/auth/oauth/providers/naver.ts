@@ -3,7 +3,7 @@
  */
 export const getNaverConfig = () => ({
   clientId: import.meta.env.VITE_NAVER_CLIENT_ID,
-  redirectUri: import.meta.env.VITE_NAVER_REDIRECT_URI || `${window.location.origin}/auth/naver/callback`,
+  redirectUri: import.meta.env.VITE_NAVER_REDIRECT_URI || `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/naver/callback`,
   authUrl: 'https://nid.naver.com/oauth2/authorize',
   scope: 'openid',
   responseType: 'code',

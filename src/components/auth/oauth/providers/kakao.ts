@@ -3,7 +3,7 @@
  */
 export const getKakaoConfig = () => ({
   clientId: import.meta.env.VITE_KAKAO_CLIENT_ID,
-  redirectUri: import.meta.env.VITE_KAKAO_REDIRECT_URI || `${window.location.origin}/auth/kakao/callback`,
+  redirectUri: import.meta.env.VITE_KAKAO_REDIRECT_URI || `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/kakao/callback`,
   authUrl: 'https://kauth.kakao.com/oauth/authorize',
   scope: 'profile_nickname account_email',
   responseType: 'code',

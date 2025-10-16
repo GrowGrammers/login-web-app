@@ -38,16 +38,16 @@ const OAuthCallback = ({ provider }: OAuthCallbackProps) => {
         let error: string | null = null;
 
         // search 파라미터 먼저 확인
-        if (window.location.search) {
-          urlParams = new URLSearchParams(window.location.search);
+        if (location.search) {
+          urlParams = new URLSearchParams(location.search);
           code = urlParams.get('code');
           state = urlParams.get('state');
           error = urlParams.get('error');
         }
 
         // search에서 찾지 못했으면 hash에서 확인
-        if (!code && !error && window.location.hash) {
-          const hashParams = window.location.hash.substring(1);
+        if (!code && !error && location.hash) {
+          const hashParams = location.hash.substring(1);
           urlParams = new URLSearchParams(hashParams);
           code = urlParams.get('code');
           state = urlParams.get('state');
@@ -122,7 +122,7 @@ const OAuthCallback = ({ provider }: OAuthCallbackProps) => {
               window.opener.postMessage({
                 type: 'OAUTH_SUCCESS',
                 code: code
-              }, window.location.origin);
+              }, location.origin || window.location.origin);
               
               setTimeout(() => {
                 window.close();

@@ -3,7 +3,7 @@
  */
 export const getGoogleConfig = () => ({
   clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-  redirectUri: import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/google/callback`,
+  redirectUri: import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/google/callback`,
   authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
   scope: 'email profile openid',
   responseType: 'code',

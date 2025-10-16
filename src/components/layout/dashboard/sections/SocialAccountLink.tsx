@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { getAuthManager, getCurrentProviderType } from '../../../../auth/authManager';
 import { useAuthStore } from '../../../../stores/authStore';
 import { CARD_STYLES } from '../../../../styles';
@@ -71,6 +72,7 @@ const ToggleSwitch = ({ isOn, disabled, onClick }: ToggleSwitchProps) => {
 };
 
 const SocialAccountLink = () => {
+  const location = useLocation();
   const currentProvider = getCurrentProviderType();
   const userInfo = useAuthStore((state) => state.userInfo);
   const [linkedProviders, setLinkedProviders] = useState<string[]>([]);
@@ -87,10 +89,10 @@ const SocialAccountLink = () => {
     }
   }, [userInfo, currentProvider]);
 
-  // 연동 완료 확인 및 회원정보 갱신 (최초 마운트 시에만)
+  // 연동 완료 확인 및 회원정보 갱신
   useEffect(() => {
     // URL에서 연동 완료 확인 (OAuth 콜백에서 대시보드로 왔을 때)
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     const justLinked = params.get('linked');
     
     if (justLinked) {
@@ -109,7 +111,7 @@ const SocialAccountLink = () => {
       };
       fetchUserInfo();
     }
-  }, []); // 최초 마운트 시에만 실행
+  }, [location.search]); // React Router의 location.search 사용
 
   const handleToggle = async (providerId: string) => {
     if (isLinking) return; // 이미 연동 중이면 무시
