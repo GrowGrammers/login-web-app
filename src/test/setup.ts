@@ -1,8 +1,9 @@
 // Mock URL and URLSearchParams BEFORE any imports that might use them
 // This prevents webidl-conversions errors in GitHub Actions
-if (typeof global !== 'undefined') {
+// Use globalThis for Node.js 18.x/20.x compatibility
+if (typeof globalThis !== 'undefined') {
   // @ts-expect-error - Mocking global objects
-  global.URL = class URL {
+  globalThis.URL = class URL {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     constructor(url: string, _base?: string) {
       this.href = url
@@ -30,7 +31,7 @@ if (typeof global !== 'undefined') {
   }
 
   // @ts-expect-error - Mocking global objects
-  global.URLSearchParams = class URLSearchParams {
+  globalThis.URLSearchParams = class URLSearchParams {
     private params: Map<string, string> = new Map()
     constructor(init?: string | URLSearchParams | Record<string, string> | string[][]) {
       if (init && typeof init === 'string') {
@@ -124,9 +125,9 @@ window.console = {
 window.alert = vi.fn()
 
 // Add additional URL mock methods
-if (typeof global.URL !== 'undefined') {
-  global.URL.createObjectURL = vi.fn(() => 'mock-object-url')
-  global.URL.revokeObjectURL = vi.fn()
+if (typeof globalThis.URL !== 'undefined') {
+  globalThis.URL.createObjectURL = vi.fn(() => 'mock-object-url')
+  globalThis.URL.revokeObjectURL = vi.fn()
 }
 
 // Clean up after each test
