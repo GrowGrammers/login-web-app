@@ -12,13 +12,20 @@ export default defineConfig({
     environmentOptions: {
       jsdom: {
         resources: 'usable',
-        url: 'http://localhost:5173'
+        url: 'http://localhost:5173',
+        pretendToBeVisual: true,
+        runScripts: 'dangerously'
       }
     },
     pool: 'forks',
     poolOptions: {
       forks: {
         singleFork: true
+      }
+    },
+    server: {
+      deps: {
+        inline: ['whatwg-url', 'webidl-conversions']
       }
     },
     coverage: {
