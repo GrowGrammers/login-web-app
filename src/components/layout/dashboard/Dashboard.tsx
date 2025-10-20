@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getAuthManager, getCurrentProviderType } from '../../../auth/authManager';
 import { getTokenRefreshService } from '../../../auth/TokenRefreshService';
 import { isJWTExpired } from '../../../utils/jwtUtils';
@@ -31,6 +31,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const isLoadingUserData = useRef(false); // 중복 API 호출 방지
 
   useEffect(() => {
     // 인증된 상태에서만 사용자 데이터 로드
@@ -45,7 +46,13 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
   }, [isAuthenticated]);
 
   const loadUserData = async () => {
+    // 이미 로딩 중이면 중복 호출 방지 (React Strict Mode 대응)
+    if (isLoadingUserData.current) {
+      return;
+    }
+
     try {
+      isLoadingUserData.current = true;
       setIsLoading(true);
       const authManager = getAuthManager();
       
@@ -126,6 +133,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       console.error('❌ 사용자 데이터 로드 실패:', error);
     } finally {
       setIsLoading(false);
+      isLoadingUserData.current = false;
     }
   };
 

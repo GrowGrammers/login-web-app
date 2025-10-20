@@ -4,7 +4,6 @@ import { getAuthManager, resetAuthManager, createEmailAuthManager } from '../../
 import { BottomSheet } from '../layout';
 import { validateEmailWithAlert } from '../../utils/emailValidationUtils';
 import { INPUT_STYLES, BUTTON_STYLES } from '../../styles';
-import { useAuthStore } from '../../stores/authStore';
 
 interface EmailLoginProps {
   onLoginSuccess: () => void;
@@ -261,14 +260,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
           setMessage('✅ 이메일 연동 성공!');
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          // 사용자 정보 새로고침
-          const authManager = getAuthManager();
-          const userInfoResult = await authManager.getCurrentUserInfo();
-          if (userInfoResult.success && userInfoResult.data) {
-            useAuthStore.getState().setUserInfo(userInfoResult.data);
-          }
-          
-          // 대시보드로 리다이렉트
+          // 대시보드로 리다이렉트 (Dashboard에서 userInfo를 가져옴)
           navigate('/dashboard?linked=email');
         } else {
           // EMAIL_EXPIRED 에러 처리

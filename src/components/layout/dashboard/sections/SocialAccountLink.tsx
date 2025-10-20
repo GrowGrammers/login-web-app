@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getAuthManager, getCurrentProviderType } from '../../../../auth/authManager';
 import { useAuthStore } from '../../../../stores/authStore';
@@ -78,6 +78,7 @@ const SocialAccountLink = () => {
   const userInfo = useAuthStore((state) => state.userInfo);
   const [linkedProviders, setLinkedProviders] = useState<string[]>([]);
   const [isLinking, setIsLinking] = useState<string | null>(null);
+  const hasShownAlert = useRef(false); // 중복 alert 방지 (React Strict Mode 대응)
 
   // 백엔드에서 받은 회원정보로 연동된 provider 목록 업데이트
   useEffect(() => {
@@ -96,7 +97,9 @@ const SocialAccountLink = () => {
     const params = new URLSearchParams(location.search);
     const justLinked = params.get('linked');
     
-    if (justLinked) {
+    if (justLinked && !hasShownAlert.current) {
+      hasShownAlert.current = true; // 중복 실행 방지
+      
       // URL 파라미터 제거
       window.history.replaceState({}, '', '/dashboard');
       
