@@ -84,7 +84,18 @@ const SocialAccountLink = () => {
   useEffect(() => {
     if (userInfo && userInfo.linkedProviders) {
       // 백엔드에서 linkedProviders 배열을 제공하면 그대로 사용
-      setLinkedProviders(userInfo.linkedProviders);
+      // 백엔드에서 ["EMAIL", "NAVER"] 형태로 오는 것을 ["email", "naver"] 형태로 변환
+      const providerMapping: Record<string, string> = {
+        'EMAIL': 'email',
+        'GOOGLE': 'google', 
+        'KAKAO': 'kakao',
+        'NAVER': 'naver'
+      };
+      
+      const normalizedProviders = userInfo.linkedProviders.map(provider => 
+        providerMapping[provider] || provider.toLowerCase()
+      );
+      setLinkedProviders(normalizedProviders);
     } else {
       // linkedProviders가 없으면 현재 로그인한 provider만 연동된 것으로 처리
       setLinkedProviders([currentProvider]);
