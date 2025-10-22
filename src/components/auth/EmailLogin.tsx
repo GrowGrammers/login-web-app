@@ -15,6 +15,9 @@ export interface EmailLoginRef {
   resetForm: () => void;
 }
 
+// 인증번호 유효 시간 (초 단위)
+const VERIFICATION_TIME_SECONDS = 300; // 5분
+
 const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess, onStepChange, isLinkMode = false }, ref) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -25,11 +28,10 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<'email' | 'verification'>('email');
   const [message, setMessage] = useState('');
-  const [timeLeft, setTimeLeft] = useState(300); // 5분 = 300초
+  const [timeLeft, setTimeLeft] = useState(VERIFICATION_TIME_SECONDS);
   const [isTimerExpired, setIsTimerExpired] = useState(false);
   const [isVerificationRequested, setIsVerificationRequested] = useState(false);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
-  const [isBackendExpired, setIsBackendExpired] = useState(false);
   const timerRef = useRef<number | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,11 +63,16 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
     });
   };
 
-  // 백스페이스 처리
+  // 백스페이스 및 엔터 처리
   const handleDigitKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace' && !verificationDigits[index] && index > 0) {
       const prevInput = document.getElementById(`digit-${index - 1}`);
       prevInput?.focus();
+    } else if (e.key === 'Enter') {
+      // 6자리 모두 입력되고 타이머가 만료되지 않았을 때만 로그인 시도
+      if (formData.verifyCode.length === 6 && !isTimerExpired && !isLoading) {
+        handleEmailLogin();
+      }
     }
   };
 
@@ -90,7 +97,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
 
   // 타이머 시작
   const startTimer = () => {
-    setTimeLeft(300); // 5분으로 리셋
+    setTimeLeft(VERIFICATION_TIME_SECONDS);
     setIsTimerExpired(false);
     
     if (timerRef.current) {
@@ -152,7 +159,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
     setStep('email');
     setMessage('');
     setFormData({ email: '', verifyCode: '' });
-    setTimeLeft(300);
+    setTimeLeft(VERIFICATION_TIME_SECONDS);
     setIsTimerExpired(false);
     clearTimer();
   }, [isLinkMode]);
@@ -180,7 +187,6 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
     setMessage('이메일을 보내고 있습니다...');
     setIsLoading(true);
     setIsVerificationRequested(false); // 초기화
-    setIsBackendExpired(false); // 백엔드 만료 상태 초기화
     
     // 인증번호 입력 필드 초기화
     setVerificationDigits(['', '', '', '', '', '']);
@@ -266,7 +272,6 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
           // EMAIL_EXPIRED 에러 처리
           if (data.message?.includes('이메일 인증 시간이 만료되었습니다') || response.status === 410) {
             setMessage('❌ 인증번호가 만료되었습니다. 새로운 인증번호를 받아주세요.');
-            setIsBackendExpired(true);
             setIsTimerExpired(true);
             clearTimer();
             setTimeLeft(0);
@@ -307,7 +312,6 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
           // EMAIL_EXPIRED 에러 처리 (410 상태 코드)
           if (result.message?.includes('이메일 인증 시간이 만료되었습니다')) {
             setMessage('❌ 인증번호가 만료되었습니다. 새로운 인증번호를 받아주세요.');
-            setIsBackendExpired(true);
             setIsTimerExpired(true);
             clearTimer();
             setTimeLeft(0);
@@ -334,10 +338,9 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
     setVerificationDigits(['', '', '', '', '', '']);
     setMessage('');
     clearTimer();
-    setTimeLeft(300);
+    setTimeLeft(VERIFICATION_TIME_SECONDS);
     setIsTimerExpired(false);
     setIsVerificationRequested(false);
-    setIsBackendExpired(false);
   };
 
   // 외부에서 resetForm 함수를 호출할 수 있도록 함
@@ -406,7 +409,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
                       onChange={(e) => handleDigitChange(index, e.target.value)}
                       onKeyDown={(e) => handleDigitKeyDown(index, e)}
                       onPaste={index === 0 ? handleDigitPaste : undefined}
-                      disabled={isLoading}
+                      disabled={isLoading || isTimerExpired}
                       maxLength={1}
                       inputMode="numeric"
                     />
@@ -414,9 +417,9 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
                 </div>
                 
 
-                  {/* 메시지 표시 - 타이머 만료 시 성공 메시지만 숨김, 에러 메시지는 계속 표시 */}
-                {message && (!isTimerExpired || message.includes('❌')) && (
-                  <div className={`text-right text-sm ${
+                  {/* 메시지 표시 - 타이머 만료 시에는 표시하지 않음 */}
+                {message && !isTimerExpired && (
+                  <div className={`text-right text-xs ${
                     message.includes('✅') 
                       ? 'text-green-600' 
                       : 'text-red-600'
@@ -432,16 +435,16 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
                   </div>
                 )}
 
-                {/* 타이머 만료 안내 - 백엔드에서 만료된 경우는 제외 */}
-                {isTimerExpired && !isBackendExpired && (
-                  <div className="text-right text-sm text-red-600">
+                {/* 타이머 만료 안내 - 타이머가 만료된 경우 항상 표시 */}
+                {isTimerExpired && (
+                  <div className="text-right text-xs text-red-600">
                     <div>5분이 지나 인증번호가 만료되었어요.</div>
                     <div>아래 '인증번호가 안 오나요?'에서 다시 인증번호를 요청해주세요.</div>
                   </div>
                 )}
 
 
-                <div className="m-0">
+                <div className="mt-6">
                   <p 
                     className="text-sm text-gray-600 mb-0 underline cursor-pointer hover:text-gray-900 transition-colors duration-200"
                     onClick={handleEmailInquiry}
@@ -449,24 +452,6 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(({ onLoginSuccess,
                     인증번호가 안 오나요?
                   </p>
                 </div>
-
-                {isTimerExpired ? (
-                  <button
-                    onClick={requestEmailVerification}
-                    disabled={isLoading}
-                    className={BUTTON_STYLES.warning}
-                  >
-                    인증번호 다시 받기
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleEmailLogin}
-                    disabled={isLoading || formData.verifyCode.length !== 6}
-                    className={BUTTON_STYLES.large}
-                  >
-                    {isLinkMode ? '연동하기' : '계속하기'}
-                  </button>
-                )}
               </div>
             </div>
           )}

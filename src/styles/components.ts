@@ -43,6 +43,13 @@ export const BUTTON_STYLES = {
     disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none
   `,
   
+  // 큰 경고 버튼
+  largeWarning: `
+    w-full p-4 bg-orange-500 text-white rounded-xl text-base font-semibold 
+    hover:bg-orange-600 hover:-translate-y-0.5 transition-all duration-200 
+    disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none
+  `,
+  
   // 작은 버튼
   small: `
     px-3 py-1.5 bg-gray-900 text-white rounded-md text-xs font-medium 
