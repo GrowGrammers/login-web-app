@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useAuthHandlers } from '../useAuthHandlers'
 import { useAuthStatus } from '../useAuthStatus'
-import { getAuthManager, getCurrentProviderType } from '../../auth/authManager'
-import { handleOAuthLogout, handleEmailLogout, isOAuthProvider } from '../../utils/logoutUtils'
+import { useLogout } from '../useLogout'
+import { getCurrentProviderType } from '../../auth/authManager'
 import { initializeTokenRefreshService } from '../../auth/TokenRefreshService'
 
 // Mock dependencies
@@ -13,21 +13,19 @@ vi.mock('react-router-dom', () => ({
 }))
 
 vi.mock('../useAuthStatus')
+vi.mock('../useLogout')
 vi.mock('../../auth/authManager')
-vi.mock('../../utils/logoutUtils')
 vi.mock('../../auth/TokenRefreshService')
 
 const mockUseAuthStatus = vi.mocked(useAuthStatus)
-const mockGetAuthManager = vi.mocked(getAuthManager)
+const mockUseLogout = vi.mocked(useLogout)
 const mockGetCurrentProviderType = vi.mocked(getCurrentProviderType)
-const mockHandleOAuthLogout = vi.mocked(handleOAuthLogout)
-const mockHandleEmailLogout = vi.mocked(handleEmailLogout)
-const mockIsOAuthProvider = vi.mocked(isOAuthProvider)
 const mockInitializeTokenRefreshService = vi.mocked(initializeTokenRefreshService)
 
 describe('useAuthHandlers', () => {
   const mockRefreshAuthStatus = vi.fn()
   const mockSetShowSplash = vi.fn()
+  const mockLogout = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -43,6 +41,9 @@ describe('useAuthHandlers', () => {
       logout: vi.fn(),
     })
 
+    mockUseLogout.mockReturnValue({
+      logout: mockLogout
+    })
   })
 
   afterEach(() => {
@@ -80,12 +81,8 @@ describe('useAuthHandlers', () => {
   })
 
   describe('handleLogout', () => {
-    it('OAuth 로그아웃이 성공하면 상태를 업데이트하고 홈으로 이동한다', async () => {
-      const mockAuthManager = { logout: vi.fn() } as unknown as import('growgrammers-auth-core').AuthManager
-      mockGetAuthManager.mockReturnValue(mockAuthManager)
-      mockGetCurrentProviderType.mockReturnValue('google')
-      mockIsOAuthProvider.mockReturnValue(true)
-      mockHandleOAuthLogout.mockResolvedValue({ success: true, message: 'Success' })
+    it('로그아웃이 성공하면 상태를 업데이트하고 홈으로 이동한다', async () => {
+      mockLogout.mockResolvedValue({ success: true })
 
       const { result } = renderHook(() => useAuthHandlers())
       
@@ -93,27 +90,7 @@ describe('useAuthHandlers', () => {
         await result.current.handleLogout(mockSetShowSplash)
       })
 
-      expect(mockHandleOAuthLogout).toHaveBeenCalledWith('google', mockAuthManager)
-      expect(mockRefreshAuthStatus).toHaveBeenCalled()
-      expect(mockSetShowSplash).toHaveBeenCalledWith(true)
-      expect(window.alert).toHaveBeenCalledWith('✅ 로그아웃되었습니다.')
-      expect(mockNavigate).toHaveBeenCalledWith('/')
-    })
-
-    it('이메일 로그아웃이 성공하면 상태를 업데이트하고 홈으로 이동한다', async () => {
-      const mockAuthManager = { logout: vi.fn() } as unknown as import('growgrammers-auth-core').AuthManager
-      mockGetAuthManager.mockReturnValue(mockAuthManager)
-      mockGetCurrentProviderType.mockReturnValue('email')
-      mockIsOAuthProvider.mockReturnValue(false)
-      mockHandleEmailLogout.mockResolvedValue({ success: true, message: 'Success' })
-
-      const { result } = renderHook(() => useAuthHandlers())
-      
-      await act(async () => {
-        await result.current.handleLogout(mockSetShowSplash)
-      })
-
-      expect(mockHandleEmailLogout).toHaveBeenCalledWith(mockAuthManager, 'email')
+      expect(mockLogout).toHaveBeenCalled()
       expect(mockRefreshAuthStatus).toHaveBeenCalled()
       expect(mockSetShowSplash).toHaveBeenCalledWith(true)
       expect(window.alert).toHaveBeenCalledWith('✅ 로그아웃되었습니다.')
@@ -121,11 +98,7 @@ describe('useAuthHandlers', () => {
     })
 
     it('로그아웃이 실패하면 에러 메시지를 표시한다', async () => {
-      const mockAuthManager = { logout: vi.fn() } as unknown as import('growgrammers-auth-core').AuthManager
-      mockGetAuthManager.mockReturnValue(mockAuthManager)
-      mockGetCurrentProviderType.mockReturnValue('google')
-      mockIsOAuthProvider.mockReturnValue(true)
-      mockHandleOAuthLogout.mockResolvedValue({ success: false, message: 'Logout failed' })
+      mockLogout.mockResolvedValue({ success: false, message: 'Logout failed' })
 
       const { result } = renderHook(() => useAuthHandlers())
       
@@ -139,11 +112,7 @@ describe('useAuthHandlers', () => {
     })
 
     it('로그아웃 중 예외가 발생하면 에러 메시지를 표시한다', async () => {
-      const mockAuthManager = { logout: vi.fn() } as unknown as import('growgrammers-auth-core').AuthManager
-      mockGetAuthManager.mockReturnValue(mockAuthManager)
-      mockGetCurrentProviderType.mockReturnValue('google')
-      mockIsOAuthProvider.mockReturnValue(true)
-      mockHandleOAuthLogout.mockRejectedValue(new Error('Network error'))
+      mockLogout.mockRejectedValue(new Error('Network error'))
 
       const { result } = renderHook(() => useAuthHandlers())
       

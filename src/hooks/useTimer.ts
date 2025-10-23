@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface UseTimerReturn {
   timeLeft: number;
@@ -14,7 +14,14 @@ export const useTimer = (initialTime: number = 0): UseTimerReturn => {
   const [isTimerExpired, setIsTimerExpired] = useState(false);
   const timerRef = useRef<number | null>(null);
 
-  const startTimer = (duration: number) => {
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const startTimer = useCallback((duration: number) => {
     setTimeLeft(duration);
     setIsTimerExpired(false);
     
@@ -35,26 +42,19 @@ export const useTimer = (initialTime: number = 0): UseTimerReturn => {
         return prevTime - 1;
       });
     }, 1000);
-  };
+  }, []);
 
-  const stopTimer = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  };
-
-  const resetTimer = () => {
+  const resetTimer = useCallback(() => {
     stopTimer();
     setTimeLeft(initialTime);
     setIsTimerExpired(false);
-  };
+  }, [stopTimer, initialTime]);
 
-  const formatTime = (seconds: number): string => {
+  const formatTime = useCallback((seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
+  }, []);
 
   // 컴포넌트 언마운트 시 타이머 정리
   useEffect(() => {

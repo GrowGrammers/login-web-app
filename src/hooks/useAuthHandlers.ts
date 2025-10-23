@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
-import { getAuthManager, getCurrentProviderType } from '../auth/authManager';
-import { handleOAuthLogout, handleEmailLogout, isOAuthProvider } from '../utils/logoutUtils';
+import { getCurrentProviderType } from '../auth/authManager';
 import { initializeTokenRefreshService } from '../auth/TokenRefreshService';
 import { useAuthStatus } from './useAuthStatus';
+import { useLogout } from './useLogout';
 
 /**
  * 이메일 로그인 후 사용자 정보 가져오기
@@ -19,6 +19,7 @@ async function fetchUserInfoAfterEmailLogin(): Promise<void> {
 
 export const useAuthHandlers = () => {
   const { refreshAuthStatus } = useAuthStatus();
+  const { logout } = useLogout();
   const navigate = useNavigate();
 
   const handleLoginSuccess = async () => {
@@ -39,18 +40,8 @@ export const useAuthHandlers = () => {
 
   const handleLogout = async (setShowSplash: (show: boolean) => void) => {
     try {
-      const authManager = getAuthManager();
-      const currentProvider = getCurrentProviderType();
-      
-      // 모든 로그인 방식 통일: 백엔드 API 호출
-      let result;
-      if (isOAuthProvider(currentProvider)) {
-        // OAuth 로그인: API 호출 방식으로 통일
-        result = await handleOAuthLogout(currentProvider, authManager);
-      } else {
-        // 이메일 로그인: 기존 방식 유지
-        result = await handleEmailLogout(authManager, currentProvider);
-      }
+      // useLogout 훅 사용 - 모든 로그아웃 로직이 훅 안에 통합됨
+      const result = await logout();
       
       if (result.success) {
         // Zustand 스토어 상태 업데이트 (전역 상태 즉시 반영)
