@@ -6,3 +6,5 @@ export { default as MessageAlert } from './MessageAlert';
 export { default as LoadingSpinner } from './LoadingSpinner';
 export { default as BackButton } from './BackButton';
 export { default as PageContainer } from './PageContainer';
+export { VerificationCodeInput } from './VerificationCodeInput';
+export { EmailInquiryContent } from './EmailInquiryContent';

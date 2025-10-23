@@ -47,22 +47,24 @@ interface ToggleSwitchProps {
 const ToggleSwitch = ({ isOn, disabled, onClick }: ToggleSwitchProps) => {
   return (
     <button
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
       disabled={disabled}
       className={`
-        relative inline-flex items-center h-7 w-14 rounded-full transition-colors duration-200 ease-in-out
-        ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
+        relative inline-flex items-center h-7 w-14 rounded-full
+        ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer transition-colors duration-200 ease-in-out'}
         ${isOn ? 'bg-blue-500' : 'bg-gray-300'}
       `}
     >
       <span
         className={`
-          inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-200 ease-in-out
+          inline-block h-5 w-5 transform rounded-full bg-white
+          ${disabled ? '' : 'transition-transform duration-200 ease-in-out'}
           ${isOn ? 'translate-x-8' : 'translate-x-1'}
         `}
       />
       <span className={`
-        absolute text-[10px] font-semibold transition-opacity duration-200
+        absolute text-[10px] font-semibold
+        ${disabled ? '' : 'transition-opacity duration-200'}
         ${isOn ? 'left-2 text-white opacity-100' : 'right-2 text-gray-600 opacity-100'}
       `}>
         {isOn ? 'ON' : 'OFF'}
@@ -142,13 +144,13 @@ const SocialAccountLink = () => {
 
     const isCurrentlyLinked = linkedProviders.includes(providerId);
     
+    // 이미 연동된 경우에는 아무 동작도 하지 않음 (토글이 비활성화되어 있어야 함)
     if (isCurrentlyLinked) {
-      // 연동 해제 로직 (추후 구현)
-      console.log(`연동 해제: ${providerId}`);
-    } else {
-      // 연동 로직
-      await linkProvider(providerId);
+      return;
     }
+    
+    // 연동 로직
+    await linkProvider(providerId);
   };
 
   const linkProvider = async (providerId: string) => {
@@ -234,8 +236,8 @@ const SocialAccountLink = () => {
               </div>
               <ToggleSwitch
                 isOn={isLinked}
-                disabled={isCurrent || isLinkingThis}
-                onClick={() => !isCurrent && !isLinkingThis && handleToggle(provider.id)}
+                disabled={isCurrent || isLinkingThis || isLinked}
+                onClick={() => !isCurrent && !isLinkingThis && !isLinked && handleToggle(provider.id)}
               />
             </div>
           );

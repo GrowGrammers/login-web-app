@@ -5,6 +5,8 @@ export { default as EmailLogin } from './EmailLogin';
 export { default as LoginComplete } from './LoginComplete';
 export { default as LoginForm } from './LoginForm';
 export { default as LoginSelector } from './LoginSelector';
+export { EmailStep } from './EmailStep';
+export { VerificationStep } from './VerificationStep';
 
 // OAuth 관련 컴포넌트들
 export { default as GoogleLogin } from './oauth/GoogleLogin';
@@ -16,5 +18,5 @@ export { default as NaverCallback } from './oauth/NaverCallback';
 export { default as OAuthLogin } from './oauth/OAuthLogin';
 export { default as OAuthCallback } from './oauth/OAuthCallback';
 
-// OAuth 설정
-export * from './oauth/providers';
+// OAuth 타입 및 설정은 config/oauth에서 직접 import하세요
+// import type { OAuthProvider, OAuthConfig } from '../../config/oauth';

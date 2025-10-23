@@ -42,15 +42,6 @@ const AppContent = () => {
     return <SplashScreen onStartApp={handleStartApp} />;
   }
 
-  // 보호된 라우트인지 확인
-  const isProtectedRoute = (path: string) => {
-    return path === '/login/complete' || path === '/login/connect';
-  };
-
-  // 보호된 라우트에 접근 시 인증되지 않은 경우 리다이렉트
-  if (isProtectedRoute(location.pathname) && !isAuthenticated) {
-    return <ProtectedRoute isAuthenticated={false}><></></ProtectedRoute>;
-  }
 
   return (
     <PageContainer>
@@ -69,9 +60,30 @@ const AppContent = () => {
           <Route path="/login/google" element={<GoogleLogin />} />
           <Route path="/login/kakao" element={<KakaoLogin />} />
           <Route path="/login/naver" element={<NaverLogin />} />
-          <Route path="/login/complete" element={<LoginComplete />} />
-          <Route path="/dashboard" element={<Dashboard onLogout={() => handleLogout(setShowSplash)} />} />
-          <Route path="/service" element={<ServiceMain />} />
+          <Route 
+            path="/login/complete" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <LoginComplete />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <Dashboard onLogout={() => handleLogout(setShowSplash)} />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/service" 
+            element={
+              <ProtectedRoute isAuthenticated={isAuthenticated}>
+                <ServiceMain />
+              </ProtectedRoute>
+            } 
+          />
           <Route path="/link/email" element={<EmailLogin ref={emailLoginRef} onLoginSuccess={handleLoginSuccess} onStepChange={setEmailLoginStep} isLinkMode={true} />} />
           <Route path="/link/google" element={<GoogleLogin />} />
           <Route path="/link/kakao" element={<KakaoLogin />} />

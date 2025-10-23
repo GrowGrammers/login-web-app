@@ -44,3 +44,4 @@ export const getOAuthConfig = (provider: OAuthProvider): OAuthConfig => {
 };
 
 export { getGoogleConfig, getKakaoConfig, getNaverConfig };
+

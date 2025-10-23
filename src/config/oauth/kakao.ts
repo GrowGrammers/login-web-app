@@ -27,3 +27,4 @@ export const getKakaoConfig = () => ({
 });
 
 export type KakaoConfig = ReturnType<typeof getKakaoConfig>;
+

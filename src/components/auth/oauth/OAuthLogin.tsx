@@ -1,5 +1,5 @@
-import type { OAuthProvider } from './providers/index';
-import { getOAuthConfig } from './providers/index';
+import type { OAuthProvider } from '../../../config/oauth';
+import { getOAuthConfig } from '../../../config/oauth';
 import { MessageAlert } from '../../ui';
 import { useOAuth } from '../../../hooks';
 

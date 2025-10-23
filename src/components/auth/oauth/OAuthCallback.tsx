@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import type { OAuthProvider } from './providers/index';
-import { getOAuthConfig } from './providers/index';
+import type { OAuthProvider } from '../../../config/oauth';
+import { getOAuthConfig } from '../../../config/oauth';
 
 interface OAuthCallbackProps {
   provider: OAuthProvider;
@@ -11,6 +11,8 @@ const OAuthCallback = ({ provider }: OAuthCallbackProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const config = getOAuthConfig(provider);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [isError, setIsError] = useState<boolean>(false);
 
   useEffect(() => {
     const handleOAuthCallback = async () => {
@@ -138,9 +140,39 @@ const OAuthCallback = ({ provider }: OAuthCallbackProps) => {
           }
         } else if (error) {
           console.error(`${config.name} OAuth 에러:`, error);
+          
+          // 에러 타입별 사용자 친화적인 메시지 처리
+          let errorMessage = '';
+          let redirectPath = '/';
+          
+          if (error === 'access_denied') {
+            errorMessage = `❌ ${config.name} 로그인이 취소되었습니다.\n\n개인정보 수집에 동의하지 않으셨거나 로그인을 취소하셨습니다.\n\n 다시 시도해주세요.`;
+            redirectPath = '/start';
+          } else if (error === 'invalid_request') {
+            errorMessage = `❌ ${config.name} 로그인 요청이 잘못되었습니다.\n\n잠시 후 다시 시도해주세요.`;
+            redirectPath = '/start';
+          } else if (error === 'unauthorized_client') {
+            errorMessage = `❌ ${config.name} 로그인 설정 오류입니다.\n\n관리자에게 문의해주세요.`;
+            redirectPath = '/start';
+          } else if (error === 'unsupported_response_type') {
+            errorMessage = `❌ ${config.name} 로그인 응답 오류입니다.\n\n잠시 후 다시 시도해주세요.`;
+            redirectPath = '/start';
+          } else if (error === 'invalid_scope') {
+            errorMessage = `❌ ${config.name} 로그인 권한 오류입니다.\n\n필요한 권한을 허용해주세요.`;
+            redirectPath = '/start';
+          } else {
+            errorMessage = `❌ ${config.name} 로그인 중 오류가 발생했습니다.\n\n오류: ${error}\n\n다시 시도해주세요.`;
+            redirectPath = '/start';
+          }
+          
+          // 에러 상태 설정 및 메시지 표시
+          setIsError(true);
+          setErrorMessage(errorMessage);
+          
+          // 3초 후 자동으로 리다이렉트
           setTimeout(() => {
-            navigate('/', { replace: true });
-          }, 2000);
+            navigate(redirectPath, { replace: true });
+          }, 3000);
         } else {
           console.error('인증 코드나 에러 정보가 없습니다.');
           setTimeout(() => {
@@ -178,11 +210,52 @@ const OAuthCallback = ({ provider }: OAuthCallbackProps) => {
         padding: '2rem',
         background: 'white',
         borderRadius: '8px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+        maxWidth: '400px',
+        width: '90%'
       }}>
-        <div style={{ color: '#666' }}>
-          🔄 {config.name} 인증을 처리 중입니다...
-        </div>
+        {isError ? (
+          <div>
+            <div style={{ 
+              color: '#dc2626', 
+              fontSize: '1.1rem', 
+              marginBottom: '1rem',
+              lineHeight: '1.5'
+            }}>
+              {errorMessage.split('\n').map((line, index) => (
+                <div key={index} style={{ marginBottom: line.includes('❌') ? '0.5rem' : '0.25rem' }}>
+                  {line}
+                </div>
+              ))}
+            </div>
+            <div style={{ 
+              color: '#6b7280', 
+              fontSize: '0.9rem',
+              marginTop: '1rem'
+            }}>
+              잠시 후 시작 화면으로 이동합니다...
+            </div>
+            <button
+              onClick={() => navigate('/start', { replace: true })}
+              style={{
+                marginTop: '1rem',
+                padding: '0.5rem 1rem',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.9rem'
+              }}
+            >
+              지금 이동하기
+            </button>
+          </div>
+        ) : (
+          <div style={{ color: '#666' }}>
+            🔄 {config.name} 인증을 처리 중입니다...
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { resetAuthManager } from '../auth/authManager';
-import type { OAuthProvider } from '../components/auth/oauth/providers/index';
-import { getOAuthConfig } from '../components/auth/oauth/providers/index';
+import type { OAuthProvider } from '../config/oauth';
+import { getOAuthConfig } from '../config/oauth';
 import { initiateOAuthFlow } from '../utils/oauthUtils';
 
 interface UseOAuthReturn {
