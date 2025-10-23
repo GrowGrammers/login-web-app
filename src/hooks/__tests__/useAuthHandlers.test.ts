@@ -94,7 +94,7 @@ describe('useAuthHandlers', () => {
       expect(mockRefreshAuthStatus).toHaveBeenCalled()
       expect(mockSetShowSplash).toHaveBeenCalledWith(true)
       expect(window.alert).toHaveBeenCalledWith('✅ 로그아웃되었습니다.')
-      expect(mockNavigate).toHaveBeenCalledWith('/')
+      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true })
     })
 
     it('로그아웃이 실패하면 에러 메시지를 표시한다', async () => {
@@ -106,9 +106,10 @@ describe('useAuthHandlers', () => {
         await result.current.handleLogout(mockSetShowSplash)
       })
 
-      expect(window.alert).toHaveBeenCalledWith('로그아웃에 실패했습니다: Logout failed')
-      expect(mockSetShowSplash).not.toHaveBeenCalled()
-      expect(mockNavigate).not.toHaveBeenCalledWith('/')
+      expect(window.alert).toHaveBeenCalledWith('⚠️ 서버 로그아웃에 실패했지만\n로컬 세션은 정리되어 안전하게 로그아웃되었습니다.')
+      expect(mockSetShowSplash).toHaveBeenCalledWith(true)
+      expect(mockRefreshAuthStatus).toHaveBeenCalled()
+      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true })
     })
 
     it('로그아웃 중 예외가 발생하면 에러 메시지를 표시한다', async () => {
@@ -120,9 +121,10 @@ describe('useAuthHandlers', () => {
         await result.current.handleLogout(mockSetShowSplash)
       })
 
-      expect(window.alert).toHaveBeenCalledWith('로그아웃 중 오류가 발생했습니다.')
-      expect(mockSetShowSplash).not.toHaveBeenCalled()
-      expect(mockNavigate).not.toHaveBeenCalledWith('/')
+      expect(window.alert).toHaveBeenCalledWith('⚠️ 로그아웃 중 오류가 발생했습니다. 로컬 세션을 정리하고 다시 시도해주세요.')
+      expect(mockSetShowSplash).toHaveBeenCalledWith(true)
+      expect(mockRefreshAuthStatus).toHaveBeenCalled()
+      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true })
     })
   })
 })
