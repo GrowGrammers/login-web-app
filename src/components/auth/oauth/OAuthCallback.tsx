@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import type { OAuthProvider } from './providers/index';
-import { getOAuthConfig } from './providers/index';
+import type { OAuthProvider } from '../../../config/oauth';
+import { getOAuthConfig } from '../../../config/oauth';
 
 interface OAuthCallbackProps {
   provider: OAuthProvider;

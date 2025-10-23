@@ -29,3 +29,4 @@ export const getGoogleConfig = () => ({
 });
 
 export type GoogleConfig = ReturnType<typeof getGoogleConfig>;
+

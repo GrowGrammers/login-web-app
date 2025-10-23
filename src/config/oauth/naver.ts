@@ -27,3 +27,4 @@ export const getNaverConfig = () => ({
 });
 
 export type NaverConfig = ReturnType<typeof getNaverConfig>;
+
