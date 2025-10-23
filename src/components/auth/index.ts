@@ -5,6 +5,8 @@ export { default as EmailLogin } from './EmailLogin';
 export { default as LoginComplete } from './LoginComplete';
 export { default as LoginForm } from './LoginForm';
 export { default as LoginSelector } from './LoginSelector';
+export { EmailStep } from './EmailStep';
+export { VerificationStep } from './VerificationStep';
 
 // OAuth 관련 컴포넌트들
 export { default as GoogleLogin } from './oauth/GoogleLogin';
