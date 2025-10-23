@@ -137,16 +137,10 @@ export const useEmailVerification = ({
         if (result.success) {
           setMessage('✅ 로그인 성공!');
           
-          // 로그인 성공 후 토큰이 저장될 때까지 대기
+          // 로그인 성공 후 잠시 대기 (메시지 표시)
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          // 토큰이 제대로 저장되었는지 확인
-          const tokenStore = new WebTokenStore();
-          const tokenResult = await tokenStore.getToken();
-          if (!tokenResult.success || !tokenResult.data?.accessToken) {
-            console.warn('⚠️ 토큰이 저장되지 않았습니다. RealHttpClient에서 처리되었는지 확인하세요.');
-          }
-          
+          // 후처리는 onSuccess 콜백에서 처리 (useAuthPostLogin 사용)
           onSuccess?.();
           return true;
         } else {

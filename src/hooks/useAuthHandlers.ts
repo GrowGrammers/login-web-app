@@ -1,41 +1,23 @@
 import { useNavigate } from 'react-router-dom';
 import { getCurrentProviderType } from '../auth/authManager';
-import { initializeTokenRefreshService } from '../auth/TokenRefreshService';
 import { useAuthStatus } from './useAuthStatus';
 import { useLogout } from './useLogout';
-
-/**
- * 이메일 로그인 후 사용자 정보 가져오기
- */
-async function fetchUserInfoAfterEmailLogin(): Promise<void> {
-  try {
-    // 토큰이 저장될 때까지 잠시 대기
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-  } catch (error) {
-    console.error('❌ 이메일 로그인 후처리 중 오류:', error);
-  }
-}
+import { useAuthPostLogin } from './useAuthPostLogin';
 
 export const useAuthHandlers = () => {
   const { refreshAuthStatus } = useAuthStatus();
   const { logout } = useLogout();
+  const { handlePostLogin } = useAuthPostLogin();
   const navigate = useNavigate();
 
   const handleLoginSuccess = async () => {
-    // 로그인 성공 시 토큰 갱신 서비스 시작
-    initializeTokenRefreshService();
-    
-    // 사용자 정보 가져오기 시도 (이메일 로그인의 경우)
     const currentProvider = getCurrentProviderType();
-    if (currentProvider === 'email') {
-      await fetchUserInfoAfterEmailLogin();
-    }
     
-    // Zustand 스토어 상태 업데이트 (전역 상태 즉시 반영)
-    await refreshAuthStatus();
-    
-    navigate('/login/complete');
+    // useAuthPostLogin 훅 사용 - 통합된 후처리 로직
+    await handlePostLogin({
+      provider: currentProvider as 'email' | 'google' | 'kakao' | 'naver',
+      redirectTo: '/login/complete'
+    });
   };
 
   const handleLogout = async (setShowSplash: (show: boolean) => void) => {

@@ -11,3 +11,4 @@ export { useForm } from './useForm';
 export { useVerificationDigits } from './useVerificationDigits';
 export { useEmailVerification } from './useEmailVerification';
 export { useLogout } from './useLogout';
+export { useAuthPostLogin } from './useAuthPostLogin';
