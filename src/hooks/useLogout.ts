@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { getAuthManager, getCurrentProviderType } from '../auth/authManager';
 import { useAuthStore } from '../stores/authStore';
 import type { AuthProviderType } from 'growgrammers-auth-core';
+import { handleRateLimitError } from '../utils/rateLimitErrorUtils';
 
 /**
  * localStorage 정리 유틸리티 함수들
@@ -110,9 +111,14 @@ export const useLogout = () => {
       // 백엔드 로그아웃 실패 -> 로컬 세션은 정리하고 오류 반환
       await cleanupLocalSession(currentProvider);
       
+      // 429 에러 처리 (authManager에서 status를 확인할 수 없다면 메시지로 판단)
+      const rateLimitMessage = result.message?.includes('429') || result.message?.toLowerCase().includes('too many')
+        ? handleRateLimitError(429, '/api/v1/auth/members/logout', result.message)
+        : null;
+      
       return { 
         success: false, 
-        message: result.message || '서버 로그아웃에 실패했지만 로컬 세션은 정리되었습니다.'
+        message: rateLimitMessage || result.message || '서버 로그아웃에 실패했지만 로컬 세션은 정리되었습니다.'
       };
       
     } catch (error) {

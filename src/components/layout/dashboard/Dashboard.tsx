@@ -102,6 +102,11 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               // 일원화된 메서드로 저장 (localStorage 접근 일원화)
               useAuthStore.getState().setUserInfo(actualUserInfo);
             } else {
+              // 429 에러 처리 (사용자 정보 조회는 조회성이라 에러 표시하지 않고 로그만 남김)
+              if (userInfoResponse.status === 429) {
+                const userInfoData = await userInfoResponse.json().catch(() => ({}));
+                console.warn('⚠️ 사용자 정보 조회 Rate Limit:', userInfoData.message || '너무 많은 요청입니다.');
+              }
               throw new Error(`HTTP ${userInfoResponse.status}`);
             }
           } catch (directApiError) {
