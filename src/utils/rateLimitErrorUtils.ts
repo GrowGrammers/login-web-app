@@ -122,7 +122,7 @@ export function getRateLimitErrorMessage(
   // 설정이 있으면 해당 메시지 반환
   if (rateLimitConfig) {
     const { waitMinutes, description } = rateLimitConfig;
-    return `❌ ${description} 요청이 너무 많습니다.\n\n${waitMinutes}분 후 다시 시도해주세요.`;
+    return `❌ ${description} 횟수 제한을 초과했습니다. ${waitMinutes}분 후 다시 시도해주세요.`;
   }
   
   // 백엔드 메시지가 있으면 우선 사용
@@ -150,5 +150,28 @@ export function handleRateLimitError(
     return getRateLimitErrorMessage(url, backendMessage);
   }
   return null;
+}
+
+/**
+ * 메시지가 429 에러 메시지인지 확인
+ * @param message 확인할 메시지
+ * @returns 429 에러 메시지인지 여부
+ */
+export function isRateLimitErrorMessage(message: string): boolean {
+  // 429 에러 메시지 패턴 확인
+  const rateLimitPatterns = [
+    '너무 많습니다',
+    'too many',
+    '429',
+    'rate limit',
+    'rate_limit',
+    'rate_limit_exceeded',
+    '제한을 초과',
+    '분 후 다시 시도'
+  ];
+  
+  return rateLimitPatterns.some(pattern => 
+    message.toLowerCase().includes(pattern.toLowerCase())
+  );
 }
 
