@@ -5,6 +5,7 @@ import { isJWTExpired } from '../../../utils/jwtUtils';
 import { useAuthStatus } from '../../../hooks';
 import { useAuthStore } from '../../../stores/authStore';
 import { BUTTON_STYLES, LOADING_STYLES } from '../../../styles';
+import { getRateLimitErrorMessage } from '../../../utils/rateLimitErrorUtils';
 import {
   SocialAccountLink,
   UserInfoSection,
@@ -102,6 +103,15 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               // 일원화된 메서드로 저장 (localStorage 접근 일원화)
               useAuthStore.getState().setUserInfo(actualUserInfo);
             } else {
+              // 429 에러 처리
+              if (userInfoResponse.status === 429) {
+                const userInfoData = await userInfoResponse.json().catch(() => ({}));
+                const errorMessage = getRateLimitErrorMessage(
+                  '/api/v1/auth/members/user-info',
+                  userInfoData.message
+                );
+                alert(errorMessage);
+              }
               throw new Error(`HTTP ${userInfoResponse.status}`);
             }
           } catch (directApiError) {

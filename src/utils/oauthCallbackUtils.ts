@@ -1,6 +1,7 @@
 /**
  * OAuth 콜백 처리 관련 유틸리티 함수들
  */
+import { handleRateLimitError } from './rateLimitErrorUtils';
 
 
 /**
@@ -101,7 +102,18 @@ export async function handleOAuthProviderCallback(
           if (response.ok) {
             result = { success: true, message: '연동이 완료되었습니다.' };
           } else {
-            result = { success: false, message: data.message || '연동에 실패했습니다.' };
+            // 429 에러 처리
+            const rateLimitMessage = handleRateLimitError(
+              response.status,
+              `${apiBaseUrl}${linkEndpoint}`,
+              data.message
+            );
+            
+            if (rateLimitMessage) {
+              result = { success: false, message: rateLimitMessage };
+            } else {
+              result = { success: false, message: data.message || '연동에 실패했습니다.' };
+            }
             console.error(`❌ ${provider} 연동 실패:`, data);
           }
         }
@@ -118,6 +130,17 @@ export async function handleOAuthProviderCallback(
         authCode: authCode,
         codeVerifier: codeVerifier
       });
+      
+      // 429 에러 처리 (authManager에서 status를 확인할 수 없다면 메시지로 판단)
+      if (!result.success) {
+        const rateLimitMessage = result.message?.includes('429') || result.message?.toLowerCase().includes('too many')
+          ? handleRateLimitError(429, `/api/v1/auth/${provider}/login`, result.message)
+          : null;
+        
+        if (rateLimitMessage) {
+          result = { success: false, message: rateLimitMessage };
+        }
+      }
     }
     
     if (result.success) {

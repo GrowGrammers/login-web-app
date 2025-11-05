@@ -5,6 +5,7 @@ import { EmailInquiryContent } from '../ui';
 import { EmailStep } from './EmailStep';
 import { VerificationStep } from './VerificationStep';
 import { useTimer, useVerificationDigits, useEmailVerification } from '../../hooks';
+import { isRateLimitErrorMessage } from '../../utils/rateLimitErrorUtils';
 
 interface EmailLoginProps {
   onLoginSuccess: () => void;
@@ -145,6 +146,7 @@ const EmailLogin = forwardRef<EmailLoginRef, EmailLoginProps>(
             onRequestVerification={handleRequestVerification}
             isLoading={isLoading}
             isLinkMode={isLinkMode}
+            message={message && isRateLimitErrorMessage(message) ? message : undefined}
           />
         ) : (
           <VerificationStep

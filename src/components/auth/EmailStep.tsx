@@ -6,6 +6,7 @@ interface EmailStepProps {
   onRequestVerification: () => void;
   isLoading: boolean;
   isLinkMode?: boolean;
+  message?: string;
 }
 
 /**
@@ -16,7 +17,8 @@ export const EmailStep = ({
   onEmailChange,
   onRequestVerification,
   isLoading,
-  isLinkMode = false
+  isLinkMode = false,
+  message
 }: EmailStepProps) => {
   return (
     <>
@@ -41,8 +43,21 @@ export const EmailStep = ({
               value={email}
               onChange={onEmailChange}
               disabled={isLoading}
-              className={`${INPUT_STYLES.default} mb-12`}
+              className={`${INPUT_STYLES.default} mb-4`}
             />
+            
+            {/* 입력창과 버튼 사이 고정 공간에 메시지 표시 */}
+            <div className="relative mb-6 min-h-[1.5rem]">
+              {message && (
+                <div className={`absolute top-0 right-0 text-right text-xs whitespace-normal ${
+                  message.includes('✅') 
+                    ? 'text-green-600' 
+                    : 'text-red-600'
+                }`}>
+                  {message}
+                </div>
+              )}
+            </div>
             
             <button
               onClick={onRequestVerification}

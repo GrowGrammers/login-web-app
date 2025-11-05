@@ -4,6 +4,7 @@ import { getAuthManager, createEmailAuthManager } from '../auth/authManager';
 import { validateEmailWithAlert } from '../utils/emailValidationUtils';
 import { WebTokenStore } from '../auth/WebTokenStore';
 import { getApiConfig } from '../config/auth.config';
+import { handleRateLimitError } from '../utils/rateLimitErrorUtils';
 
 interface UseEmailVerificationOptions {
   isLinkMode?: boolean;
@@ -52,7 +53,23 @@ export const useEmailVerification = ({
         onTimerStart?.();
         return true;
       } else {
-        setMessage(`❌ ${result.message}`);
+        // 429 에러 처리 (result.error 또는 result.message에서 확인)
+        const isRateLimitError = result.error === 'RATE_LIMIT_EXCEEDED' ||
+                                 result.message?.includes('429') || 
+                                 result.message?.toLowerCase().includes('too many') ||
+                                 result.message?.includes('RATE_LIMIT_EXCEEDED') ||
+                                 result.message?.toLowerCase().includes('rate_limit') ||
+                                 result.message?.includes('제한을 초과');
+        
+        const rateLimitMessage = isRateLimitError
+          ? handleRateLimitError(429, '/api/v1/auth/email/request', result.message)
+          : null;
+        
+        if (rateLimitMessage) {
+          setMessage(rateLimitMessage);
+        } else {
+          setMessage(`❌ ${result.message}`);
+        }
         console.error('❌ 이메일 인증번호 요청 실패:', result.error);
         return false;
       }
@@ -115,6 +132,18 @@ export const useEmailVerification = ({
           navigate('/dashboard?linked=email');
           return true;
         } else {
+          // 429 에러 처리
+          const rateLimitMessage = handleRateLimitError(
+            response.status,
+            `${apiBaseUrl}${linkEndpoint}`,
+            data.message
+          );
+          
+          if (rateLimitMessage) {
+            setMessage(rateLimitMessage);
+            return false;
+          }
+          
           // EMAIL_EXPIRED 에러 처리
           if (data.message?.includes('이메일 인증 시간이 만료되었습니다') || response.status === 410) {
             setMessage('❌ 인증번호가 만료되었습니다. 새로운 인증번호를 받아주세요.');
@@ -144,6 +173,23 @@ export const useEmailVerification = ({
           onSuccess?.();
           return true;
         } else {
+          // 429 에러 처리 (result.error 또는 result.message에서 확인)
+          const isRateLimitError = result.error === 'RATE_LIMIT_EXCEEDED' ||
+                                   result.message?.includes('429') || 
+                                   result.message?.toLowerCase().includes('too many') ||
+                                   result.message?.includes('RATE_LIMIT_EXCEEDED') ||
+                                   result.message?.toLowerCase().includes('rate_limit') ||
+                                   result.message?.includes('제한을 초과');
+          
+          const rateLimitMessage = isRateLimitError
+            ? handleRateLimitError(429, '/api/v1/auth/members/email-login', result.message)
+            : null;
+          
+          if (rateLimitMessage) {
+            setMessage(rateLimitMessage);
+            return false;
+          }
+          
           // EMAIL_EXPIRED 에러 처리
           if (result.message?.includes('이메일 인증 시간이 만료되었습니다')) {
             setMessage('❌ 인증번호가 만료되었습니다. 새로운 인증번호를 받아주세요.');
