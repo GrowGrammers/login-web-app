@@ -53,9 +53,15 @@ export const useEmailVerification = ({
         onTimerStart?.();
         return true;
       } else {
-        // 429 에러 처리 (authManager에서 status를 확인할 수 없다면 메시지로 판단)
-        // TODO: authManager에서 status를 반환하도록 수정 필요할 수 있음
-        const rateLimitMessage = result.message?.includes('429') || result.message?.toLowerCase().includes('too many')
+        // 429 에러 처리 (result.error 또는 result.message에서 확인)
+        const isRateLimitError = result.error === 'RATE_LIMIT_EXCEEDED' ||
+                                 result.message?.includes('429') || 
+                                 result.message?.toLowerCase().includes('too many') ||
+                                 result.message?.includes('RATE_LIMIT_EXCEEDED') ||
+                                 result.message?.toLowerCase().includes('rate_limit') ||
+                                 result.message?.includes('제한을 초과');
+        
+        const rateLimitMessage = isRateLimitError
           ? handleRateLimitError(429, '/api/v1/auth/email/request', result.message)
           : null;
         
@@ -167,8 +173,15 @@ export const useEmailVerification = ({
           onSuccess?.();
           return true;
         } else {
-          // 429 에러 처리 (authManager에서 status를 확인할 수 없다면 메시지로 판단)
-          const rateLimitMessage = result.message?.includes('429') || result.message?.toLowerCase().includes('too many')
+          // 429 에러 처리 (result.error 또는 result.message에서 확인)
+          const isRateLimitError = result.error === 'RATE_LIMIT_EXCEEDED' ||
+                                   result.message?.includes('429') || 
+                                   result.message?.toLowerCase().includes('too many') ||
+                                   result.message?.includes('RATE_LIMIT_EXCEEDED') ||
+                                   result.message?.toLowerCase().includes('rate_limit') ||
+                                   result.message?.includes('제한을 초과');
+          
+          const rateLimitMessage = isRateLimitError
             ? handleRateLimitError(429, '/api/v1/auth/members/email-login', result.message)
             : null;
           

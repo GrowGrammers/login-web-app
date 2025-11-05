@@ -2,6 +2,7 @@ import type { HttpClient, HttpRequestConfig, HttpResponse } from 'growgrammers-a
 import { getTokenRefreshService } from './TokenRefreshService';
 import { getExpirationFromJWT } from '../utils/jwtUtils';
 import { useAuthStore } from '../stores/authStore';
+import { getRateLimitErrorMessage } from '../utils/rateLimitErrorUtils';
 
 // Helpers
 function isFormData(v: unknown): v is FormData {
@@ -108,6 +109,13 @@ export class RealHttpClient implements HttpClient {
       });
 
       const responseHeaders = Object.fromEntries(response.headers.entries());
+      
+      // 429 에러 처리 (user-info API인 경우 alert 표시)
+      if (response.status === 429 && url.includes('/auth/members/user-info')) {
+        const errorData = typeof data === 'object' && data !== null ? data : {};
+        const errorMessage = getRateLimitErrorMessage(url, errorData.message);
+        alert(errorMessage);
+      }
       
       // Authorization 헤더를 대소문자 구분 없이 찾기
       const authHeaderValue = responseHeaders.authorization || 

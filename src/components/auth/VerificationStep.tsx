@@ -1,4 +1,5 @@
 import { VerificationCodeInput } from '../ui';
+import { isRateLimitErrorMessage } from '../../utils/rateLimitErrorUtils';
 
 interface VerificationStepProps {
   email: string;
@@ -57,8 +58,19 @@ export const VerificationStep = ({
                 disabled={isLoading || isTimerExpired}
               />
 
-              {/* 메시지 표시 - 타이머 만료 시에는 표시하지 않음 */}
-              {message && !isTimerExpired && (
+              {/* 429 에러 메시지 표시 - 타이머 만료 시에도 표시 */}
+              {message && isRateLimitErrorMessage(message) && (
+                <div className={`text-right text-xs ${
+                  message.includes('✅') 
+                    ? 'text-green-600' 
+                    : 'text-red-600'
+                }`}>
+                  {message}
+                </div>
+              )}
+              
+              {/* 일반 메시지 표시 - 타이머 만료 시에는 표시하지 않음 */}
+              {message && !isRateLimitErrorMessage(message) && !isTimerExpired && (
                 <div className={`text-right text-xs ${
                   message.includes('✅') 
                     ? 'text-green-600' 
